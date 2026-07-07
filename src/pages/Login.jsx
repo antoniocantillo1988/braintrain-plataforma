@@ -8,7 +8,8 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ email: '', password: '' });
+  // 1. Cambiamos 'email' por 'identificador' en el estado
+  const [form, setForm] = useState({ identificador: '', password: '' });
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
 
@@ -22,6 +23,7 @@ export default function Login() {
     setCargando(true);
 
     try {
+      // 2. Se enviará { identificador, password } al backend
       const data = await api.post('/auth/login', form);
       login(data.token, data.user);
       navigate('/dashboard');
@@ -47,16 +49,17 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1">
-              Email
+              Email o Nombre de usuario
             </label>
+            {/* 3. Cambiamos type="email" a type="text" y name="email" a name="identificador" */}
             <input
-              type="email"
-              name="email"
-              value={form.email}
+              type="text"
+              name="identificador"
+              value={form.identificador}
               onChange={handleChange}
               required
-              autoComplete="email"
-              placeholder="tu@email.com"
+              autoComplete="username"
+              placeholder="tu@email.com o tu_usuario"
               className="w-full border border-stone-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
