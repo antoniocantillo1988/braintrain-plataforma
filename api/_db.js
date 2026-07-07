@@ -1,12 +1,10 @@
 // api/_db.js
-// Conexión compartida a MySQL (awardspace)
-// Los archivos con _ delante son ignorados por Vercel como rutas.
-
-import mysql from 'mysql2/promise';
+const mysql = require('mysql2/promise');
+const jwt = require('jsonwebtoken');
 
 let pool;
 
-export function getPool() {
+function getPool() {
   if (!pool) {
     pool = mysql.createPool({
       host: process.env.DB_HOST,
@@ -15,30 +13,25 @@ export function getPool() {
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       waitForConnections: true,
-      connectionLimit: 5,      // awardspace limita conexiones simultáneas
+      connectionLimit: 5,
       queueLimit: 0,
-      ssl: false,               // awardspace no requiere SSL en plan gratuito
+      ssl: false,
     });
   }
   return pool;
 }
 
-// Ejecutar una query con parámetros de forma segura (evita SQL injection)
-export async function query(sql, params = []) {
-  const pool = getPool();
-  const [rows] = await pool.execute(sql, params);
+async function query(sql, params = []) {
+  const p = getPool();
+  const [rows] = await p.execute(sql, params);
   return rows;
 }
 
-// Respuesta JSON estandarizada para las funciones API
-export function json(res, status, data) {
+function json(res, status, data) {
   res.status(status).json(data);
 }
 
-// Middleware: extrae y verifica el JWT del header Authorization
-import jwt from 'jsonwebtoken';
-
-export function verifyToken(req) {
+function verifyToken(req) {
   const auth = req.headers['authorization'];
   if (!auth || !auth.startsWith('Bearer ')) return null;
   try {
@@ -48,7 +41,7 @@ export function verifyToken(req) {
   }
 }
 
-export function requireAuth(req, res) {
+function requireAuth(req, res) {
   const user = verifyToken(req);
   if (!user) {
     res.status(401).json({ error: 'No autenticado. Inicia sesión.' });
@@ -56,3 +49,5 @@ export function requireAuth(req, res) {
   }
   return user;
 }
+
+module.exports = { query, json, verifyToken, requireAuth };

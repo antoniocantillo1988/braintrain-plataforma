@@ -1,13 +1,9 @@
 // api/auth/login.js
-// POST /api/auth/login
-// Body: { email, password }
-// Gestiona migración automática de cuentas legacy (contraseña en texto plano)
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { query, json } = require('../_db');
 
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { query, json } from '../_db.js';
-
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return json(res, 405, { error: 'Método no permitido' });
   }
@@ -20,32 +16,28 @@ export default async function handler(req, res) {
 
   try {
     const rows = await query(
-      'SELECT id, email, password_legacy, password_hash, nombre_usuario, tipo FROM usuarios WHERE email = ?',
+      'SELECT id, email, password, nombre_usuario, tipo FROM usuarios WHERE email = ?',
       [email.toLowerCase()]
     );
 
     if (rows.length === 0) {
-      // No decimos si el email existe o no (seguridad)
       return json(res, 401, { error: 'Email o contraseña incorrectos.' });
     }
 
     const user = rows[0];
     let valid = false;
 
-    if (user.password_hash) {
-      // Cuenta ya migrada: comparar con bcrypt
-      valid = await bcrypt.compare(password, user.password_hash);
-    } else if (user.password_legacy) {
-      // Cuenta legacy (texto plano): comparar directamente
-      valid = password === user.password_legacy;
+    // Si la contraseña empieza por $2 es un hash bcrypt, si no es texto plano (legacy)
+    if (user.password && user.password.startsWith('$2')) {
+      valid = await bcrypt.compare(password, user.password);
+    } else {
+      // Contraseña en texto plano (usuarios legacy de tu BD original)
+      valid = password === user.password;
 
       if (valid) {
-        // ¡Migrar en este momento! Guardamos el hash y borramos el legacy.
+        // Migramos a bcrypt automáticamente
         const hash = await bcrypt.hash(password, 12);
-        await query(
-          "UPDATE usuarios SET password_hash = ?, password_legacy = '' WHERE id = ?",
-          [hash, user.id]
-        );
+        await query('UPDATE usuarios SET password = ? WHERE id = ?', [hash, user.id]);
       }
     }
 
@@ -65,12 +57,12 @@ export default async function handler(req, res) {
         id: user.id,
         email: user.email,
         nombre_usuario: user.nombre_usuario,
-        tipo: user.tipo,  // 1 = admin (Antonio), 0 = usuario
+        tipo: user.tipo,
       },
     });
 
   } catch (err) {
-    console.error('[login]', err);
-    return json(res, 500, { error: 'Error interno. Inténtalo de nuevo.' });
+    console.error('[login error]', err.message);
+    return json(res, 500, { error: 'Error interno: ' + err.message });
   }
-}
+};
