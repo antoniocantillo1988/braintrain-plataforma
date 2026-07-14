@@ -55,3 +55,10 @@ export default function App() {
     </AuthProvider>
   );
 }
+
+<Layout>
+   <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/citas" element={<Citas />} />
+   </Routes>
+</Layout>
