@@ -19,9 +19,10 @@ function getCalendarClient() {
 async function crearEventoCalendar({ fecha, hora_inicio, hora_fin, nombre_usuario, email_usuario, motivo }) {
   const calendar = getCalendarClient();
 
-  // Construir fechas ISO completas
-  const inicio = new Date(`${fecha}T${hora_inicio}`).toISOString();
-  const fin    = new Date(`${fecha}T${hora_fin}`).toISOString();
+  // Cambiamos a este formato para asegurar que Google Calendar lo tome bien:
+  // Usamos el formato 'YYYY-MM-DDTHH:MM:SS' directamente con 'Europe/Madrid'
+  const inicio = `${fecha}T${hora_inicio}`;
+  const fin    = `${fecha}T${hora_fin}`;
 
   const evento = {
     summary: `Consulta Orienta — ${nombre_usuario}`,
@@ -42,8 +43,8 @@ async function crearEventoCalendar({ fecha, hora_inicio, hora_fin, nombre_usuari
     reminders: {
       useDefault: false,
       overrides: [
-        { method: 'email', minutes: 60 },
-        { method: 'popup', minutes: 15 },
+        { method: 'email', minutes: 60 }, // Email 60 minutos antes
+        { method: 'popup', minutes: 60 }, // Notificación popup 60 minutos antes
       ],
     },
   };

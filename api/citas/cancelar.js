@@ -1,18 +1,26 @@
 // api/citas/cancelar.js
 const { query, json, requireAuth } = require('../_db');
+const { cancelarEventoCalendar } = require('../_calendar');
 
 module.exports = async function handler(req, res) {
+  // 1. Verificamos autenticación
   const user = requireAuth(req, res);
   if (!user) return;
-  if (req.method !== 'POST') return json(res, 405, { error: 'Método no permitido' });
+  
+  // 2. Verificamos método
+  if (req.method !== 'POST') {
+    return json(res, 405, { error: 'Método no permitido' });
+  }
 
   const { cita_id } = req.body || {};
-  if (!cita_id) return json(res, 400, { error: 'Falta el ID de la cita.' });
+  if (!cita_id) {
+    return json(res, 400, { error: 'Falta el ID de la cita.' });
+  }
 
   try {
-    // 1. Buscamos la cita para saber qué hueco de disponibilidad tenemos que liberar
+    // 3. Buscamos la cita, incluyendo el ID del evento de Google
     const citas = await query(
-      'SELECT disponibilidad_id FROM citas WHERE id = ? AND usuario_id = ? AND estado = "confirmada"',
+      'SELECT disponibilidad_id, google_evento_id FROM citas WHERE id = ? AND usuario_id = ? AND estado = "confirmada"',
       [cita_id, user.id]
     );
     
@@ -20,12 +28,22 @@ module.exports = async function handler(req, res) {
       return json(res, 404, { error: 'Cita no encontrada o ya está cancelada.' });
     }
 
-    const disp_id = citas[0].disponibilidad_id;
+    const { disponibilidad_id, google_evento_id } = citas[0];
 
-    // 2. Liberamos el hueco en el calendario
-    await query('UPDATE disponibilidad SET ocupado = 0 WHERE id = ?', [disp_id]);
+    // 4. Intentamos cancelar en Google Calendar si existe el ID
+    if (google_evento_id) {
+      try {
+        await cancelarEventoCalendar(google_evento_id);
+      } catch (googleErr) {
+        console.error('[cancelar] Error al borrar de Google:', googleErr.message);
+        // Continuamos aunque falle el borrado en Google, para no bloquear la BD
+      }
+    }
 
-    // 3. Marcamos la cita como cancelada
+    // 5. Liberamos el hueco de disponibilidad
+    await query('UPDATE disponibilidad SET ocupado = 0 WHERE id = ?', [disponibilidad_id]);
+
+    // 6. Marcamos la cita como cancelada en nuestra base de datos
     await query('UPDATE citas SET estado = "cancelada" WHERE id = ?', [cita_id]);
 
     return json(res, 200, { mensaje: 'Cita cancelada correctamente.' });
