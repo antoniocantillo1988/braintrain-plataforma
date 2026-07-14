@@ -4,6 +4,9 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
+// Asegúrate de que esta línea exista en la parte superior de src/App.jsx
+import Dashboard from './pages/Dashboard';
+
 // Importa la nueva página Home
 import Home from './components/Home'; 
 import Login from './pages/Login';
