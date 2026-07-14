@@ -62,6 +62,22 @@ export default function Citas() {
     }
   }
 
+
+  //CANCELAR CITA
+async function cancelarCita(cita_id) {
+    if (!window.confirm('¿Seguro que quieres cancelar esta cita? El hueco volverá a quedar libre.')) return;
+    setCargando(true);
+    setMensaje(null);
+    try {
+      const res = await api.post('/citas/cancelar', { cita_id });
+      setMensaje({ tipo: 'ok', texto: res.mensaje });
+      cargarDatos(); // Recargamos las listas para que desaparezca la cita
+    } catch (err) {
+      setMensaje({ tipo: 'error', texto: err.message });
+      setCargando(false);
+    }
+  }
+
   // Agrupa huecos por fecha
   const porFecha = huecos.reduce((acc, h) => {
     (acc[h.fecha] = acc[h.fecha] || []).push(h);
@@ -173,16 +189,31 @@ export default function Citas() {
                       {c.estado}
                     </span>
                   </div>
-                  {c.enlace_videollamada && c.estado === 'confirmada' && (
-                    <a
-                      href={c.enlace_videollamada}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                    >
-                      🎥 Unirse
-                    </a>
-                  )}
+                  
+{/* PEGA ESTO EN SU LUGAR */}
+                  <div className="flex items-center gap-3">
+                    {c.enlace_videollamada && c.estado === 'confirmada' && (
+                      <a
+                        href={c.enlace_videollamada}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                      >
+                        🎥 Unirse
+                      </a>
+                    )}
+                    {c.estado === 'confirmada' && (
+                      <button
+                        onClick={() => cancelarCita(c.id)}
+                        className="text-red-400 hover:text-red-600 font-bold text-lg px-2"
+                        title="Cancelar esta cita"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  {/* HASTA AQUÍ */}
+
                 </div>
               </div>
             ))}
