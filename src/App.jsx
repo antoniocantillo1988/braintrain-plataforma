@@ -5,7 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
 // Importa la nueva página Home
-import Home from './pages/Home'; 
+import Home from './components/Home'; 
 import Login from './pages/Login';
 import Register from './pages/Register';
 // ... (resto de tus importaciones: Dashboard, Citas, etc.)
