@@ -110,22 +110,37 @@ export default function Citas() {
         </h2>
         
         <div className="flex flex-wrap gap-2">
-          {huecos.filter(h => h.fecha === diaSeleccionado?.toISOString().split('T')[0]).length === 0 ? (
-            <p className="text-sm text-stone-400">No hay huecos este día.</p>
-          ) : (
-            huecos.filter(h => h.fecha === diaSeleccionado?.toISOString().split('T')[0]).map((h) => (
-              <button
-                key={h.id}
-                onClick={() => setSeleccionado(seleccionado?.id === h.id ? null : h)}
-                className={`px-4 py-2 rounded-lg text-sm border transition font-medium ${
-                  seleccionado?.id === h.id ? 'bg-teal-600 text-white' : 'border-stone-300 text-stone-700 hover:border-teal-400'
-                }`}
-              >
-                {h.hora_inicio.slice(0, 5)}
-              </button>
-            ))
-          )}
-        </div>
+    {/* Usamos una lógica de comparación de cadenas directa para evitar errores de zona horaria */}
+    {huecos.filter(h => {
+        // Convertimos el día seleccionado a formato YYYY-MM-DD local
+        const year = diaSeleccionado.getFullYear();
+        const month = String(diaSeleccionado.getMonth() + 1).padStart(2, '0');
+        const day = String(diaSeleccionado.getDate()).padStart(2, '0');
+        const fechaComparar = `${year}-${month}-${day}`;
+        
+        return h.fecha === fechaComparar;
+    }).length === 0 ? (
+      <p className="text-sm text-stone-400">No hay huecos este día.</p>
+    ) : (
+      huecos.filter(h => {
+        const year = diaSeleccionado.getFullYear();
+        const month = String(diaSeleccionado.getMonth() + 1).padStart(2, '0');
+        const day = String(diaSeleccionado.getDate()).padStart(2, '0');
+        const fechaComparar = `${year}-${month}-${day}`;
+        return h.fecha === fechaComparar;
+      }).map((h) => (
+        <button
+          key={h.id}
+          onClick={() => setSeleccionado(seleccionado?.id === h.id ? null : h)}
+          className={`px-4 py-2 rounded-lg text-sm border transition font-medium ${
+            seleccionado?.id === h.id ? 'bg-teal-600 text-white' : 'border-stone-300 text-stone-700 hover:border-teal-400'
+          }`}
+        >
+          {h.hora_inicio.slice(0, 5)}
+        </button>
+      ))
+    )}
+  </div>
 
         {seleccionado && (
           <div className="mt-6 bg-teal-50 border border-teal-200 rounded-xl p-4 space-y-3">
