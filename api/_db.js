@@ -9,7 +9,7 @@ function getPool() {
     pool = mysql.createPool({
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || '4000'),
-      database: process.env.DB_DATABASE, // CORREGIDO para que lea la variable de Vercel
+      database: process.env.DB_DATABASE || process.env.DB_NAME || 'test', // CORREGIDO para que lea la variable de Vercel
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       // AÑADIDO: Seguridad SSL obligatoria para TiDB
