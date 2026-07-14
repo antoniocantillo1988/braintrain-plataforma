@@ -20,6 +20,7 @@ function getPool() {
       },
       waitForConnections: true,
       connectionLimit: 5,
+      dateStrings: true, // <--- ESTO RECOGE SOLO LA FECHA PARA INTRODUCIR LA CITA
     });
   }
   return pool;
