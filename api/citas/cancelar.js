@@ -1,6 +1,16 @@
 // api/citas/cancelar.js
 const { query, json, requireAuth } = require('../_db');
 const { cancelarEventoCalendar } = require('../_calendar');
+const nodemailer = require('nodemailer');
+
+// Configuración del transportador de correos
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 module.exports = async function handler(req, res) {
   // 1. Verificamos autenticación
@@ -18,9 +28,12 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // 3. Buscamos la cita, incluyendo el ID del evento de Google
+    // 3. Buscamos la cita y el nombre del usuario para el aviso
     const citas = await query(
-      'SELECT disponibilidad_id, google_evento_id FROM citas WHERE id = ? AND usuario_id = ? AND estado = "confirmada"',
+      `SELECT c.disponibilidad_id, c.google_evento_id, u.nombre_usuario 
+       FROM citas c 
+       JOIN usuarios u ON c.usuario_id = u.id 
+       WHERE c.id = ? AND c.usuario_id = ? AND c.estado = "confirmada"`,
       [cita_id, user.id]
     );
     
@@ -28,23 +41,38 @@ module.exports = async function handler(req, res) {
       return json(res, 404, { error: 'Cita no encontrada o ya está cancelada.' });
     }
 
-    const { disponibilidad_id, google_evento_id } = citas[0];
+    const { disponibilidad_id, google_evento_id, nombre_usuario } = citas[0];
 
-    // 4. Intentamos cancelar en Google Calendar si existe el ID
+    // 4. Intentamos cancelar en Google Calendar
     if (google_evento_id) {
       try {
         await cancelarEventoCalendar(google_evento_id);
       } catch (googleErr) {
         console.error('[cancelar] Error al borrar de Google:', googleErr.message);
-        // Continuamos aunque falle el borrado en Google, para no bloquear la BD
       }
     }
 
     // 5. Liberamos el hueco de disponibilidad
     await query('UPDATE disponibilidad SET ocupado = 0 WHERE id = ?', [disponibilidad_id]);
 
-    // 6. Marcamos la cita como cancelada en nuestra base de datos
+    // 6. Marcamos la cita como cancelada
     await query('UPDATE citas SET estado = "cancelada" WHERE id = ?', [cita_id]);
+
+    // 7. Notificación por email a Antonio
+    try {
+      await transporter.sendMail({
+        from: '"Sistema de Citas" <tu-email@gmail.com>',
+        to: 'antonio.es.cantillo@gmail.com',
+        subject: '⚠️ Cita cancelada',
+        html: `
+          <h1>Cita cancelada</h1>
+          <p>El usuario <b>${nombre_usuario}</b> ha cancelado su cita (ID: ${cita_id}).</p>
+          <p>El hueco ya ha sido liberado en el sistema.</p>
+        `
+      });
+    } catch (emailErr) {
+      console.error('[cancelar] Error al enviar email de notificación:', emailErr.message);
+    }
 
     return json(res, 200, { mensaje: 'Cita cancelada correctamente.' });
 

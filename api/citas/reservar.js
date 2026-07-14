@@ -1,6 +1,16 @@
 // api/citas/reservar.js
 const { query, json, requireAuth } = require('../_db');
 const { crearEventoCalendar } = require('../_calendar');
+const nodemailer = require('nodemailer');
+
+// Configuración del transportador de correos
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 module.exports = async function handler(req, res) {
   const user = requireAuth(req, res);
@@ -48,6 +58,29 @@ module.exports = async function handler(req, res) {
 
     // Marcamos el hueco como ocupado
     await query('UPDATE disponibilidad SET ocupado = 1 WHERE id = ?', [disponibilidad_id]);
+
+    // Envío de correo de notificación a Antonio
+    try {
+      await transporter.sendMail({
+        from: '"Sistema de Citas" <tu-email@gmail.com>',
+        to: 'antonio.es.cantillo@gmail.com',
+        subject: 'Nueva reserva de cita',
+        html: `
+          <h1>Nueva reserva realizada</h1>
+          <p>Se ha reservado una nueva cita:</p>
+          <ul>
+            <li><b>Usuario:</b> ${nombre_usuario}</li>
+            <li><b>Email:</b> ${email}</li>
+            <li><b>Fecha:</b> ${hueco.fecha}</li>
+            <li><b>Hora:</b> ${hueco.hora_inicio}</li>
+            <li><b>Motivo:</b> ${motivo_consulta || 'No especificado'}</li>
+          </ul>
+        `
+      });
+    } catch (emailErr) {
+      console.error('[reservar] Error al enviar email de notificación:', emailErr.message);
+      // No devolvemos error aquí para que el usuario reciba su confirmación aunque falle el email interno
+    }
 
     return json(res, 201, {
       ok: true,
