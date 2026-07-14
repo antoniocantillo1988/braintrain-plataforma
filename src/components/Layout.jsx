@@ -5,7 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
 // Importa tus páginas
-import Home from './pages/Home';
+import Home from './components/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Citas from './pages/Citas';
