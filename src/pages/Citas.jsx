@@ -27,31 +27,31 @@ export default function Citas() {
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
-  const [user, setUser] = useState(null); // Estado para gestionar al usuario
+  const [user, setUser] = useState(null); 
 
   // Límite de 2 horas definido dentro del componente
   const limiteReserva = new Date(Date.now() + 2 * 60 * 60 * 1000);
 
   useEffect(() => { 
-    // Simulación de carga de usuario (ajusta según tu lógica real de Auth)
     const token = localStorage.getItem('token'); 
-    if (token) setUser({ id: 1 }); // Ejemplo de usuario logueado
+    if (token) setUser({ id: 1 });
     
+    // Carga inicial (siempre carga disponibilidad)
     cargarDatos(); 
   }, []);
+
+  // REACCIÓN: Este efecto detecta cuando el usuario está disponible y recarga sus citas
+  useEffect(() => {
+    if (user) {
+      cargarCitasUsuario();
+    }
+  }, [user]);
 
   async function cargarDatos() {
     setCargando(true);
     try {
-      // La disponibilidad debe ser pública (endpoint modificado para no requerir Auth)
       const d = await api.get('/citas/disponibilidad');
       setHuecos(d.huecos || []);
-      
-      // Solo pedimos las citas propias si el usuario está logueado
-      if (user) {
-        const c = await api.get('/citas/mis-citas');
-        setMisCitas(c.citas || []);
-      }
     } catch (err) {
       setMensaje({ tipo: 'error', texto: err.message });
     } finally {
@@ -59,13 +59,19 @@ export default function Citas() {
     }
   }
 
+  // Nueva función separada para obtener las citas privadas
+  async function cargarCitasUsuario() {
+    try {
+      const c = await api.get('/citas/mis-citas');
+      setMisCitas(c.citas || []);
+    } catch (err) {
+      console.error("Error al cargar citas del usuario:", err);
+    }
+  }
+
   async function reservar() {
-    // 1. Guardián: Si no hay usuario, avisar
     if (!user) {
-      setMensaje({ 
-        tipo: 'error', 
-        texto: 'Debes iniciar sesión para confirmar tu reserva.' 
-      });
+      setMensaje({ tipo: 'error', texto: 'Debes iniciar sesión para confirmar tu reserva.' });
       return;
     }
 
@@ -83,36 +89,30 @@ export default function Citas() {
       setSeleccionado(null);
       setMotivo('');
       cargarDatos();
+      cargarCitasUsuario();
     } catch (err) {
-      // 2. Manejo de error específico
-      setMensaje({ 
-        tipo: 'error', 
-        texto: err.message || 'Error al procesar la reserva.' 
-      });
+      setMensaje({ tipo: 'error', texto: err.message || 'Error al procesar la reserva.' });
     } finally {
       setEnviando(false);
     }
   }
 
   async function cancelarCita(cita_id) {
-    if (!window.confirm('¿Seguro que quieres cancelar esta cita? El hueco volverá a quedar libre.')) return;
-    setCargando(true);
+    if (!window.confirm('¿Seguro que quieres cancelar esta cita?')) return;
     try {
       const res = await api.post('/citas/cancelar', { cita_id });
       setMensaje({ tipo: 'ok', texto: res.mensaje });
+      cargarCitasUsuario();
       cargarDatos();
     } catch (err) {
       setMensaje({ tipo: 'error', texto: err.message });
-      setCargando(false);
     }
   }
 
-  // Identificar días con huecos para el calendario
   const diasDisponibles = [...new Set(huecos.map(h => new Date(h.fecha + 'T00:00:00')))];
 
   if (cargando) return <div className="sm:pl-52 p-6 text-stone-400 text-sm">Cargando…</div>;
 
-  // Lógica segura para obtener huecos del día
   const year = diaSeleccionado?.getFullYear();
   const month = String(diaSeleccionado?.getMonth() + 1).padStart(2, '0');
   const day = String(diaSeleccionado?.getDate()).padStart(2, '0');
