@@ -12,7 +12,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// CORRECCIÓN: Usamos 'export default' en lugar de 'module.exports'
 export default async function handler(req, res) {
   const user = requireAuth(req, res);
   if (!user) return;
@@ -32,6 +31,19 @@ export default async function handler(req, res) {
     }
     const hueco = huecos[0];
 
+    // --- NUEVA VALIDACIÓN: Mínimo 2 horas de antelación ---
+    const fechaCita = new Date(`${hueco.fecha}T${hueco.hora_inicio}`);
+    const ahora = new Date();
+    // Calculamos la diferencia en milisegundos y convertimos a horas
+    const diferenciaHoras = (fechaCita - ahora) / (1000 * 60 * 60);
+
+    if (diferenciaHoras <= 2) {
+      return json(res, 400, { 
+        error: 'Las reservas deben realizarse con al menos 2 horas de antelación.' 
+      });
+    }
+    // ------------------------------------------------------
+
     // Obtenemos datos del usuario para el evento
     const usuarios = await query(
       'SELECT nombre_usuario, email FROM usuarios WHERE id = ?',
@@ -39,7 +51,7 @@ export default async function handler(req, res) {
     );
     const { nombre_usuario, email } = usuarios[0];
 
-    // Creamos el evento en Google Calendar
+    // Creamos el evento en Google Calendar con Meet automático
     const { evento_id, enlace_meet } = await crearEventoCalendar({
       fecha:          hueco.fecha,
       hora_inicio:    hueco.hora_inicio,
@@ -49,7 +61,7 @@ export default async function handler(req, res) {
       motivo:         motivo_consulta || '',
     });
 
-    // Guardamos la cita en la BD
+    // Guardamos la cita en la BD con el enlace de Meet ya incluido
     await query(
       `INSERT INTO citas 
         (usuario_id, disponibilidad_id, motivo_consulta, estado, google_evento_id, enlace_meet)
@@ -60,7 +72,7 @@ export default async function handler(req, res) {
     // Marcamos el hueco como ocupado
     await query('UPDATE disponibilidad SET ocupado = 1 WHERE id = ?', [disponibilidad_id]);
 
-    // Envío de correo de notificación
+    // Envío de correo de notificación a Antonio
     try {
       await transporter.sendMail({
         from: '"Sistema de Citas" <tu-email@gmail.com>',
@@ -68,18 +80,25 @@ export default async function handler(req, res) {
         subject: 'Nueva reserva de cita',
         html: `
           <h1>Nueva reserva realizada</h1>
-          <p>Usuario: ${nombre_usuario}</p>
-          <p>Fecha: ${hueco.fecha} a las ${hueco.hora_inicio}</p>
+          <p>Se ha reservado una nueva cita:</p>
+          <ul>
+            <li><b>Usuario:</b> ${nombre_usuario}</li>
+            <li><b>Email:</b> ${email}</li>
+            <li><b>Fecha:</b> ${hueco.fecha}</li>
+            <li><b>Hora:</b> ${hueco.hora_inicio}</li>
+            <li><b>Motivo:</b> ${motivo_consulta || 'No especificado'}</li>
+          </ul>
         `
       });
     } catch (emailErr) {
-      console.error('[reservar] Error al enviar email:', emailErr.message);
+      console.error('[reservar] Error al enviar email de notificación:', emailErr.message);
+      // No devolvemos error aquí para que el usuario reciba su confirmación aunque falle el email interno
     }
 
     return json(res, 201, {
       ok: true,
       enlace_meet,
-      mensaje: '✅ Cita confirmada.',
+      mensaje: '✅ Cita confirmada. Recibirás un email con el enlace de Google Meet.',
     });
 
   } catch (err) {
