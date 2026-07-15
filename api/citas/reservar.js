@@ -1,7 +1,7 @@
 // api/citas/reservar.js
-const { query, json, requireAuth } = require('../_db');
-const { crearEventoCalendar } = require('../_calendar');
-const nodemailer = require('nodemailer');
+import { query, json, requireAuth } from '../_db.js';
+import { crearEventoCalendar } from '../_calendar.js';
+import nodemailer from 'nodemailer';
 
 // Configuración del transportador de correos
 const transporter = nodemailer.createTransport({

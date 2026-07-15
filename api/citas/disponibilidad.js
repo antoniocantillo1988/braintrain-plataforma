@@ -1,7 +1,7 @@
 // api/citas/disponibilidad.js
-const { query, json, requireAuth } = require('../_db');
+import { query, json, requireAuth } from '../_db.js';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   const user = requireAuth(req, res);
   if (!user) return;
 

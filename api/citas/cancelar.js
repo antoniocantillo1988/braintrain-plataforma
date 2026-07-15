@@ -1,7 +1,7 @@
 // api/citas/cancelar.js
-const { query, json, requireAuth } = require('../_db');
-const { cancelarEventoCalendar } = require('../_calendar');
-const nodemailer = require('nodemailer');
+import { query, json, requireAuth } from '../_db.js';
+import { cancelarEventoCalendar } from '../_calendar.js';
+import nodemailer from 'nodemailer';
 
 // Configuración del transportador de correos
 const transporter = nodemailer.createTransport({
@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // 1. Verificamos autenticación
   const user = requireAuth(req, res);
   if (!user) return;
