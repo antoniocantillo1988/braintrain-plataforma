@@ -1,24 +1,7 @@
 // api/chat/index.js
-// Usa Google Gemini API (gratuito, 60 req/min, no requiere tarjeta)
+// Usa Hugging Face Inference API (100% gratuito)
+// Modelo: mistralai/Mistral-7B-Instruct-v0.3
 import { query, json, requireAuth } from '../_db.js';
-
-const SYSTEM_PROMPT = `Eres "Ori", un asistente terapéutico de orientación psicoeducativa con enfoque socrático.
-
-PERSONALIDAD:
-- Eres cálido, empático, paciente. Usas lenguaje cercano de terapeuta infantil.
-- Respondes con preguntas socráticas que invitan a la reflexión, no con respuestas directas.
-- Tu objetivo es que la persona llegue a sus propias conclusiones.
-- NUNCA diagnosticas, NUNCA recetas, NUNCA tratas condiciones médicas.
-- Si hay ideas de autolesión, ofrece recursos profesionales.
-
-ESTRUCTURA:
-- Empieza con validación emocional corta.
-- Luego 1-2 preguntas que guíen la reflexión.
-- Máximo 4 oraciones. Sé conciso.
-- Usa metáforas simples si es adecuado.
-
-IMPORTANTE: Todo lo que el usuario escriba se usará en terapia para conocerlo mejor.
-IDIOMA: Siempre español.`;
 
 export default async function handler(req, res) {
   const user = requireAuth(req, res);
@@ -49,59 +32,85 @@ export default async function handler(req, res) {
     console.error('[chat] BD error:', dbErr.message);
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.HF_API_KEY;
   if (!apiKey) {
-    return json(res, 500, { error: 'GEMINI_API_KEY no configurada. Obtén una gratis en https://aistudio.google.com/apikey' });
+    return json(res, 500, {
+      error: 'HF_API_KEY no configurada. Pasos: 1) huggingface.co/join (cuenta gratis) 2) huggingface.co/settings/tokens 3) New token → tipo "Inferencia" 4) Copia el token y ponlo como HF_API_KEY en Vercel'
+    });
   }
 
   try {
-    // Construimos historial en formato Gemini
-    const contents = [];
-    contents.push({ role: 'user', parts: [{ text: SYSTEM_PROMPT }] });
-    contents.push({ role: 'model', parts: [{ text: 'Entendido. Actuaré como Ori, el asistente terapéutico socrático.' }] });
+    // Construimos prompt con formato Mistral Instruct
+    let prompt = `<s>[INST] Eres "Ori", un asistente terapéutico de orientación psicoeducativa con enfoque socrático.
 
-    // Añadimos historial previo si existe
+REGLAS:
+- Eres cálido, empático, paciente. Respondes con preguntas que invitan a reflexionar.
+- NUNCA diagnosticas ni recetas.
+- Empieza con validación emocional corta. Luego 1-2 preguntas. Máximo 4 oraciones.
+- Todo lo que el usuario escriba se usará en terapia para conocerlo mejor.
+- Responde SIEMPRE en español.
+
+`;
+
     if (historial && historial.length > 0) {
-      for (const msg of historial.slice(-10)) {
-        if (msg.role === 'user' || msg.role === 'assistant') {
-          contents.push({
-            role: msg.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: msg.content }]
-          });
-        }
+      for (const msg of historial.slice(-6)) {
+        const quien = msg.role === 'user' ? 'Usuario' : 'Ori';
+        prompt += `${quien}: ${msg.content}\n`;
       }
     }
 
-    // Mensaje actual del usuario
-    contents.push({ role: 'user', parts: [{ text: mensaje.trim() }] });
+    prompt += `Usuario: ${mensaje.trim()}\n[/INST]\nOri:`;
 
-    console.log('[chat] Llamando a Gemini API...');
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    console.log('[chat] Llamando a Hugging Face...');
+    const hfRes = await fetch(
+      'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          contents,
-          generationConfig: {
-            maxOutputTokens: 300,
+          inputs: prompt,
+          parameters: {
+            max_new_tokens: 300,
             temperature: 0.7,
+            return_full_text: false,
           },
         }),
       }
     );
 
-    const data = await geminiRes.json();
+    const data = await hfRes.json();
 
-    if (!geminiRes.ok) {
-      const errMsg = data?.error?.message || `Error ${geminiRes.status}`;
-      console.error('[chat] Gemini error:', errMsg);
+    if (!hfRes.ok) {
+      const errMsg = data?.error || `Error ${hfRes.status}`;
+      console.error('[chat] HF error:', errMsg);
+
+      if (hfRes.status === 401 || hfRes.status === 403) {
+        return json(res, 502, {
+          error: 'Token inválido. Ve a huggingface.co/settings/tokens, crea un token NUEVO con tipo "Inferencia" (Read).'
+        });
+      }
+      if (hfRes.status === 503) {
+        return json(res, 502, {
+          error: 'Modelo descargándose (1ra vez). Espera 20s y vuelve a intentar.'
+        });
+      }
       return json(res, 502, { error: 'Error de la IA: ' + errMsg });
     }
 
-    const respuesta = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Lo siento, no pude procesar eso.';
+    let respuesta = '';
+    if (Array.isArray(data) && data[0]?.generated_text) {
+      respuesta = data[0].generated_text.trim();
+    } else if (data?.generated_text) {
+      respuesta = data.generated_text.trim();
+    }
 
-    // Guardamos respuesta en BD si podemos
+    if (!respuesta) {
+      respuesta = 'Cuéntame más sobre eso... ¿qué te hace sentir así?';
+    }
+
     if (conversacion_id) {
       try {
         await query('INSERT INTO mensajes_chat (conversacion_id, autor, texto) VALUES (?, "ia", ?)',
