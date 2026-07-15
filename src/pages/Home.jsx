@@ -1,5 +1,23 @@
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const testimonios = [
+  { texto: "Las sesiones con Antonio han sido un antes y un después. Me ha ayudado a gestionar mi ansiedad de una forma muy práctica.", autor: "María G.", perfil: "Estudiante de Derecho" },
+  { texto: "Gracias al trabajo en neurodesarrollo con mi hijo, hemos notado una mejora increíble en su autonomía y confianza.", autor: "Carlos R.", perfil: "Padre de familia" },
+  { texto: "El enfoque resolutivo de Antonio es lo que más destaco. Herramientas reales para el día a día.", autor: "Laura M.", perfil: "Profesional en activo" }
+];
+
 // src/pages/Home.jsx
 export default function Home() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % testimonios.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div className="max-w-4xl mx-auto space-y-16">
       {/* Hero Section */}
