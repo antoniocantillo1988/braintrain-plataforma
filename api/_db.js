@@ -15,7 +15,7 @@ function getPool() {
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       // Se pasa la configuración SSL como un string JSON para máxima compatibilidad en Vercel.
-      ssl: '{"rejectUnauthorized":true}',
+      ssl: { rejectUnauthorized: true },
       waitForConnections: true,
       connectionLimit: 5,
       dateStrings: true,
