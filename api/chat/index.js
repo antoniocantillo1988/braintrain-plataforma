@@ -1,6 +1,6 @@
 // api/chat/index.js
-// Usa Hugging Face Inference API (100% gratuito)
-// Modelo: mistralai/Mistral-7B-Instruct-v0.3
+// Usa DeepSeek API (gratuito, 500 requests/día, funciona en Vercel)
+// Formato compatible con OpenAI, solo cambia base URL y modelo
 import { query, json, requireAuth } from '../_db.js';
 
 export default async function handler(req, res) {
@@ -32,84 +32,57 @@ export default async function handler(req, res) {
     console.error('[chat] BD error:', dbErr.message);
   }
 
-  const apiKey = process.env.HF_API_KEY;
+  const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     return json(res, 500, {
-      error: 'HF_API_KEY no configurada. Pasos: 1) huggingface.co/join (cuenta gratis) 2) huggingface.co/settings/tokens 3) New token → tipo "Inferencia" 4) Copia el token y ponlo como HF_API_KEY en Vercel'
+      error: 'DEEPSEEK_API_KEY no configurada. Pasos:\n' +
+        '1) Ve a https://platform.deepseek.com/ y crea cuenta (gratis)\n' +
+        '2) Ve a API Keys → "Create API key"\n' +
+        '3) Copia la key y ponla como DEEPSEEK_API_KEY en Vercel'
     });
   }
 
   try {
-    // Construimos prompt con formato Mistral Instruct
-    let prompt = `<s>[INST] Eres "Ori", un asistente terapéutico de orientación psicoeducativa con enfoque socrático.
+    const messages = [
+      {
+        role: 'system',
+        content: `Eres "Ori", un asistente terapéutico de orientación psicoeducativa con enfoque socrático.
 
 REGLAS:
 - Eres cálido, empático, paciente. Respondes con preguntas que invitan a reflexionar.
 - NUNCA diagnosticas ni recetas.
 - Empieza con validación emocional corta. Luego 1-2 preguntas. Máximo 4 oraciones.
 - Todo lo que el usuario escriba se usará en terapia para conocerlo mejor.
-- Responde SIEMPRE en español.
+- Responde SIEMPRE en español.`
+      },
+      ...(historial || []).slice(-10),
+      { role: 'user', content: mensaje.trim() }
+    ];
 
-`;
+    console.log('[chat] Llamando a DeepSeek...');
+    const resAPI = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages,
+        max_tokens: 300,
+        temperature: 0.7,
+      }),
+    });
 
-    if (historial && historial.length > 0) {
-      for (const msg of historial.slice(-6)) {
-        const quien = msg.role === 'user' ? 'Usuario' : 'Ori';
-        prompt += `${quien}: ${msg.content}\n`;
-      }
-    }
-
-    prompt += `Usuario: ${mensaje.trim()}\n[/INST]\nOri:`;
-
-    console.log('[chat] Llamando a Hugging Face...');
-    const hfRes = await fetch(
-      'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 300,
-            temperature: 0.7,
-            return_full_text: false,
-          },
-        }),
-      }
-    );
-
-    const data = await hfRes.json();
-
-    if (!hfRes.ok) {
-      const errMsg = data?.error || `Error ${hfRes.status}`;
-      console.error('[chat] HF error:', errMsg);
-
-      if (hfRes.status === 401 || hfRes.status === 403) {
-        return json(res, 502, {
-          error: 'Token inválido. Ve a huggingface.co/settings/tokens, crea un token NUEVO con tipo "Inferencia" (Read).'
-        });
-      }
-      if (hfRes.status === 503) {
-        return json(res, 502, {
-          error: 'Modelo descargándose (1ra vez). Espera 20s y vuelve a intentar.'
-        });
-      }
+    if (!resAPI.ok) {
+      let errMsg = `Error ${resAPI.status}`;
+      try { const d = await resAPI.json(); errMsg = d.error?.message || errMsg; } catch {}
+      console.error('[chat] DeepSeek error:', errMsg);
       return json(res, 502, { error: 'Error de la IA: ' + errMsg });
     }
 
-    let respuesta = '';
-    if (Array.isArray(data) && data[0]?.generated_text) {
-      respuesta = data[0].generated_text.trim();
-    } else if (data?.generated_text) {
-      respuesta = data.generated_text.trim();
-    }
-
-    if (!respuesta) {
-      respuesta = 'Cuéntame más sobre eso... ¿qué te hace sentir así?';
-    }
+    const data = await resAPI.json();
+    const respuesta = data?.choices?.[0]?.message?.content?.trim() || 'Cuéntame más... ¿qué te hace sentir así?';
 
     if (conversacion_id) {
       try {
