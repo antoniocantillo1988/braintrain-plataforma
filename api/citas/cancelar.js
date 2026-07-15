@@ -3,15 +3,6 @@ import { query, json, requireAuth } from '../_db.js';
 import { cancelarEventoCalendar } from '../_calendar.js';
 import nodemailer from 'nodemailer';
 
-// Configuración del transportador de correos
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
 export default async function handler(req, res) {
   // 1. Verificamos autenticación
   const user = requireAuth(req, res);
@@ -60,6 +51,15 @@ export default async function handler(req, res) {
 
     // 7. Notificación por email a Antonio
     try {
+      // Se crea el transportador aquí para evitar un crash si las variables de entorno no están definidas.
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+
       await transporter.sendMail({
         from: '"Sistema de Citas" <tu-email@gmail.com>',
         to: 'antonio.es.cantillo@gmail.com',

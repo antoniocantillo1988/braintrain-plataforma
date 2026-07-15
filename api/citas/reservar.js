@@ -4,15 +4,6 @@ import { crearEventoCalendar } from '../_calendar.js';
 import nodemailer from 'nodemailer';
 import jwt from 'jsonwebtoken';
 
-// Configuración del transportador de correos
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
 export default async function handler(req, res) {
   // --- BLOQUE DE DEPURACIÓN DE JWT ---
   // Este bloque es para diagnosticar el error 401 en Vercel.
@@ -102,6 +93,15 @@ export default async function handler(req, res) {
 
     // Envío de correo de notificación a Antonio
     try {
+      // Se crea el transportador aquí para evitar un crash si las variables de entorno no están definidas.
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+
       await transporter.sendMail({
         from: '"Sistema de Citas" <tu-email@gmail.com>',
         to: 'antonio.es.cantillo@gmail.com',
