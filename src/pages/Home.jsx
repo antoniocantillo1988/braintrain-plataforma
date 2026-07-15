@@ -35,10 +35,25 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Testimonio */}
-      <section className="bg-stone-50 p-8 rounded-3xl text-center">
-        <p className="text-lg italic text-stone-700 mb-4">"Antonio me ha ayudado a entender mis procesos y a gestionar mis emociones de una forma increíblemente resolutiva."</p>
-        <span className="font-bold text-stone-800">— Cliente satisfecho</span>
+      {/* Carrusel de Testimonios */}
+      <section className="py-10 bg-stone-50 rounded-3xl px-6 text-center overflow-hidden">
+        <h2 className="text-2xl font-bold mb-8">Lo que dicen de nosotros</h2>
+        <div className="relative h-40 flex items-center justify-center">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+              className="absolute w-full max-w-lg"
+            >
+              <p className="italic text-lg text-stone-700 mb-2">"{testimonios[index].texto}"</p>
+              <div className="font-bold text-teal-800">{testimonios[index].autor}</div>
+              <div className="text-sm text-stone-500">{testimonios[index].perfil}</div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </section>
 
 
