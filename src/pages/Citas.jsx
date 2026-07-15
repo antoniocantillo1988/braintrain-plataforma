@@ -27,21 +27,31 @@ export default function Citas() {
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
+  const [user, setUser] = useState(null); // Estado para gestionar al usuario
 
   // Límite de 2 horas definido dentro del componente
   const limiteReserva = new Date(Date.now() + 2 * 60 * 60 * 1000);
 
-  useEffect(() => { cargarDatos(); }, []);
+  useEffect(() => { 
+    // Simulación de carga de usuario (ajusta según tu lógica real de Auth)
+    const token = localStorage.getItem('token'); 
+    if (token) setUser({ id: 1 }); // Ejemplo de usuario logueado
+    
+    cargarDatos(); 
+  }, []);
 
   async function cargarDatos() {
     setCargando(true);
     try {
-      const [d, c] = await Promise.all([
-        api.get('/citas/disponibilidad'),
-        api.get('/citas/mis-citas'),
-      ]);
+      // La disponibilidad debe ser pública (endpoint modificado para no requerir Auth)
+      const d = await api.get('/citas/disponibilidad');
       setHuecos(d.huecos || []);
-      setMisCitas(c.citas || []);
+      
+      // Solo pedimos las citas propias si el usuario está logueado
+      if (user) {
+        const c = await api.get('/citas/mis-citas');
+        setMisCitas(c.citas || []);
+      }
     } catch (err) {
       setMensaje({ tipo: 'error', texto: err.message });
     } finally {
@@ -49,17 +59,13 @@ export default function Citas() {
     }
   }
 
-// 1. Obtén el usuario de tu contexto o estado global (ejemplo)
-// const { user } = useAuth();
   async function reservar() {
-    // 1. Guardián: Si no hay usuario, redirigir o avisar
+    // 1. Guardián: Si no hay usuario, avisar
     if (!user) {
       setMensaje({ 
         tipo: 'error', 
         texto: 'Debes iniciar sesión para confirmar tu reserva.' 
       });
-      // Opcional: Redirigir al login después de un momento
-      // setTimeout(() => window.location.href = '/login', 2000);
       return;
     }
 
@@ -78,7 +84,7 @@ export default function Citas() {
       setMotivo('');
       cargarDatos();
     } catch (err) {
-      // 2. Manejo de error específico (si el servidor devuelve error de autenticación)
+      // 2. Manejo de error específico
       setMensaje({ 
         tipo: 'error', 
         texto: err.message || 'Error al procesar la reserva.' 
@@ -187,23 +193,25 @@ export default function Citas() {
       </section>
 
       {/* ── Mis citas ── */}
-      <section>
-        <h2 className="text-base font-semibold text-stone-700 mb-4">Tus citas</h2>
-        {misCitas.map((c) => (
-          <div key={c.id} className="bg-white border border-stone-200 rounded-xl p-4 mb-3 flex justify-between items-center">
-            <div>
-              <p className="text-sm font-medium">{formatFecha(c.fecha)} · {c.hora_inicio.slice(0, 5)}</p>
-              <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_ESTILOS[c.estado]}`}>
-                {c.estado}
-              </span>
+      {user && (
+        <section>
+          <h2 className="text-base font-semibold text-stone-700 mb-4">Tus citas</h2>
+          {misCitas.map((c) => (
+            <div key={c.id} className="bg-white border border-stone-200 rounded-xl p-4 mb-3 flex justify-between items-center">
+              <div>
+                <p className="text-sm font-medium">{formatFecha(c.fecha)} · {c.hora_inicio.slice(0, 5)}</p>
+                <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_ESTILOS[c.estado]}`}>
+                  {c.estado}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                {c.estado === 'confirmada' && <a href={c.enlace_videollamada} target="_blank" rel="noreferrer" className="text-teal-600 text-xs font-bold">🎥 Unirse</a>}
+                {c.estado === 'confirmada' && <button onClick={() => cancelarCita(c.id)} className="text-red-500 font-bold text-lg">✕</button>}
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              {c.estado === 'confirmada' && <a href={c.enlace_videollamada} target="_blank" rel="noreferrer" className="text-teal-600 text-xs font-bold">🎥 Unirse</a>}
-              {c.estado === 'confirmada' && <button onClick={() => cancelarCita(c.id)} className="text-red-500 font-bold text-lg">✕</button>}
-            </div>
-          </div>
-        ))}
-      </section>
+          ))}
+        </section>
+      )}
     </div>
   );
 }

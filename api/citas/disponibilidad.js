@@ -1,10 +1,8 @@
 // api/citas/disponibilidad.js
-import { query, json, requireAuth } from '../_db.js';
+import { query, json } from '../_db.js'; // Eliminamos requireAuth
 
 export default async function handler(req, res) {
-  const user = requireAuth(req, res);
-  if (!user) return;
-
+  // Eliminamos la validación de usuario, ya que queremos que sea público
   if (req.method !== 'GET') return json(res, 405, { error: 'Método no permitido' });
 
   try {
