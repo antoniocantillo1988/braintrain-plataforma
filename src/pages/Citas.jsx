@@ -34,8 +34,8 @@ export default function Citas() {
   const limiteReserva = new Date(Date.now() + 2 * 60 * 60 * 1000);
 
   useEffect(() => { 
-    cargarDatos(); 
-  }, []);
+    cargarDatos();
+  }, [user]); // Se ejecuta cuando el componente se monta y cada vez que el usuario cambia.
 
   async function cargarDatos() {
     setCargando(true);
@@ -48,6 +48,8 @@ export default function Citas() {
       if (user) {
         const c = await api.get('/citas/mis-citas');
         setMisCitas(c.citas || []);
+      } else {
+        setMisCitas([]); // Limpia las citas si el usuario no está logueado.
       }
     } catch (err) {
       console.error("Error al cargar datos:", err);
