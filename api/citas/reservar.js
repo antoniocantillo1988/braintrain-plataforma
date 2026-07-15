@@ -1,35 +1,12 @@
 // api/citas/reservar.js
 import { query, json, requireAuth } from '../_db.js';
-import { crearEventoCalendar } from '../_calendar.js';
+import { crearEventoCalendar, cancelarEventoCalendar } from '../_calendar.js';
 import nodemailer from 'nodemailer';
-import jwt from 'jsonwebtoken';
 
 export default async function handler(req, res) {
-  // --- BLOQUE DE DEPURACIÓN DE JWT ---
-  // Este bloque es para diagnosticar el error 401 en Vercel.
-  // Reemplaza temporalmente a `requireAuth` con una verificación manual y logs detallados.
-  console.log('[reservar DEBUG] Iniciando verificación de autenticación.');
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.error('[reservar DEBUG] Cabecera de autorización no encontrada o con formato incorrecto.');
-    return json(res, 401, { error: 'Authentication header missing or malformed.' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  console.log(`[reservar DEBUG] Token recibido (primeros 20 chars): ${token.substring(0, 20)}...`);
-  console.log(`[reservar DEBUG] ¿Está la variable de entorno JWT_SECRET disponible? ${!!process.env.JWT_SECRET}`);
-
-  let user;
-  try {
-    user = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('[reservar DEBUG] Verificación de JWT exitosa. Usuario:', user);
-  } catch (err) {
-    console.error('[reservar DEBUG] ¡FALLO en la verificación de JWT!', err.name, err.message);
-    return json(res, 401, { error: `JWT Verification Failed: ${err.message}` });
-  }
-  // --- FIN DEL BLOQUE DE DEPURACIÓN ---
-
+  // Se restaura la llamada a requireAuth, que ahora funciona correctamente
+  // gracias a los cambios en _db.js.
+  const user = requireAuth(req, res);
   if (!user) return;
   if (req.method !== 'POST') return json(res, 405, { error: 'Método no permitido' });
 

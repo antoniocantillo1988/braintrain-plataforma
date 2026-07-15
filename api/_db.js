@@ -1,5 +1,6 @@
 // api/_db.js
 import mysql from 'mysql2/promise';
+import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
 // ─── Base de datos ───────────────────────────────────────────
@@ -48,31 +49,26 @@ export function verifyPassword(password, stored) {
 
 // ─── Tokens JWT ──
 export function createToken(payload) {
-  const secret = process.env.JWT_SECRET;
-  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-  const body = Buffer.from(JSON.stringify({
-    ...payload,
-    exp: Math.floor(Date.now() / 1000) + 7 * 24 * 3600 
-  })).toString('base64url');
-  const sig = crypto.createHmac('sha256', secret).update(`${header}.${body}`).digest('base64url');
-  return `${header}.${body}.${sig}`;
+  // Se usa la librería estándar para crear tokens de forma robusta.
+  return jwt.sign(
+    payload,
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' } // La expiración se maneja automáticamente.
+  );
 }
 
 export function verifyToken(req) {
   try {
     const auth = req.headers['authorization'];
     if (!auth || !auth.startsWith('Bearer ')) return null;
+
     const token = auth.slice(7);
-    const [header, body, sig] = token.split('.');
-    const expectedSig = crypto
-      .createHmac('sha256', process.env.JWT_SECRET)
-      .update(`${header}.${body}`)
-      .digest('base64url');
-    if (sig !== expectedSig) return null;
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString());
-    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+
+    // Se usa la librería estándar que gestiona firma, expiración y errores.
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
     return payload;
-  } catch {
+  } catch (err) {
+    // jwt.verify lanza una excepción si el token es inválido o ha expirado.
     return null;
   }
 }
