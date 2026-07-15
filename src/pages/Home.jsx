@@ -34,6 +34,16 @@ export default function Home() {
           <p className="text-sm text-stone-600">Orientación académica y desarrollo personal.</p>
         </div>
       </section>
+
+      {/* Testimonio */}
+      <section className="bg-stone-50 p-8 rounded-3xl text-center">
+        <p className="text-lg italic text-stone-700 mb-4">"Antonio me ha ayudado a entender mis procesos y a gestionar mis emociones de una forma increíblemente resolutiva."</p>
+        <span className="font-bold text-stone-800">— Cliente satisfecho</span>
+      </section>
+
+
+
+
     </div>
   );
 }
