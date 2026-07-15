@@ -14,10 +14,8 @@ function getPool() {
       database: process.env.DB_DATABASE || process.env.DB_NAME || 'test',
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      ssl: {
-        minVersion: 'TLSv1.2',
-        rejectUnauthorized: true
-      },
+      // Se simplifica la configuración SSL para máxima compatibilidad con proveedores cloud como PlanetScale.
+      ssl: { "rejectUnauthorized": true },
       waitForConnections: true,
       connectionLimit: 5,
       dateStrings: true,
