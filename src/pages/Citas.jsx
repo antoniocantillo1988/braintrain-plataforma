@@ -1,5 +1,5 @@
 // src/pages/Citas.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DayPicker } from 'react-day-picker';
 import { es } from 'date-fns/locale';
 import 'react-day-picker/dist/style.css';
@@ -33,30 +33,44 @@ export default function Citas() {
 
   const limiteReserva = new Date(Date.now() + 2 * 60 * 60 * 1000);
 
-  useEffect(() => { 
-    cargarDatos();
-  }, [user]); // Se ejecuta cuando el componente se monta y cada vez que el usuario cambia.
-
-  async function cargarDatos() {
+  // Define una función de recarga que se puede llamar desde cualquier lugar.
+  // useCallback se asegura de que la función no se recree en cada render,
+  // a menos que 'user' cambie.
+  const recargarDatos = useCallback(async () => {
     setCargando(true);
     try {
-      // 1. Carga pública
-      const d = await api.get('/citas/disponibilidad');
-      setHuecos(d.huecos || []);
-      
-      // 2. Carga privada: Solo si el usuario está autenticado
+      // Carga en paralelo los datos públicos y, si hay usuario, los privados.
+      const promesas = [api.get('/citas/disponibilidad')];
       if (user) {
-        const c = await api.get('/citas/mis-citas');
-        setMisCitas(c.citas || []);
-      } else {
-        setMisCitas([]); // Limpia las citas si el usuario no está logueado.
+        promesas.push(api.get('/citas/mis-citas'));
       }
+
+      const [resDisponibilidad, resMisCitas] = await Promise.all(promesas);
+
+      setHuecos(resDisponibilidad.huecos || []);
+
+      // Si la promesa de misCitas se ejecutó, actualizamos el estado.
+      if (resMisCitas) {
+        setMisCitas(resMisCitas.citas || []);
+      } else {
+        // Si no, nos aseguramos de que esté vacío (caso de cierre de sesión).
+        setMisCitas([]);
+      }
+
     } catch (err) {
       console.error("Error al cargar datos:", err);
+      // Si falla la carga (p. ej. token expirado), limpiamos las citas del usuario.
+      setMisCitas([]);
     } finally {
       setCargando(false);
     }
-  }
+  }, [user]); // La función depende del estado del usuario.
+
+  // Ejecuta la recarga de datos cuando el componente se monta por primera vez
+  // y cada vez que el estado de autenticación del usuario cambia.
+  useEffect(() => {
+    recargarDatos();
+  }, [recargarDatos]);
 
   async function reservar() {
     if (!user) {
@@ -77,7 +91,7 @@ export default function Citas() {
       setMensaje({ tipo: 'ok', texto: res.mensaje });
       setSeleccionado(null);
       setMotivo('');
-      cargarDatos(); // Recargamos todo tras la reserva
+      recargarDatos(); // Recargamos todo tras la reserva
     } catch (err) {
       setMensaje({ tipo: 'error', texto: err.response?.data?.error || 'Error al procesar la reserva.' });
     } finally {
@@ -91,7 +105,7 @@ export default function Citas() {
     try {
       const res = await api.post('/citas/cancelar', { cita_id });
       setMensaje({ tipo: 'ok', texto: res.mensaje });
-      cargarDatos();
+      recargarDatos();
     } catch (err) {
       setMensaje({ tipo: 'error', texto: err.message });
     }
