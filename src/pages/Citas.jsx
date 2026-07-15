@@ -49,21 +49,40 @@ export default function Citas() {
     }
   }
 
+// 1. Obtén el usuario de tu contexto o estado global (ejemplo)
+// const { user } = useAuth();
   async function reservar() {
+    // 1. Guardián: Si no hay usuario, redirigir o avisar
+    if (!user) {
+      setMensaje({ 
+        tipo: 'error', 
+        texto: 'Debes iniciar sesión para confirmar tu reserva.' 
+      });
+      // Opcional: Redirigir al login después de un momento
+      // setTimeout(() => window.location.href = '/login', 2000);
+      return;
+    }
+
     if (!seleccionado) return;
     setEnviando(true);
     setMensaje(null);
+    
     try {
       const res = await api.post('/citas/reservar', {
         disponibilidad_id: seleccionado.id,
         motivo_consulta: motivo,
       });
+      
       setMensaje({ tipo: 'ok', texto: res.mensaje });
       setSeleccionado(null);
       setMotivo('');
       cargarDatos();
     } catch (err) {
-      setMensaje({ tipo: 'error', texto: err.message });
+      // 2. Manejo de error específico (si el servidor devuelve error de autenticación)
+      setMensaje({ 
+        tipo: 'error', 
+        texto: err.message || 'Error al procesar la reserva.' 
+      });
     } finally {
       setEnviando(false);
     }
@@ -161,7 +180,7 @@ export default function Citas() {
                 disabled={enviando}
                 className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm"
             >
-                {enviando ? 'Enviando...' : 'Confirmar reserva'}
+                {enviando ? 'Enviando...' : user ? 'Confirmar reserva' : 'Inicia sesión para reservar'}
             </button>
           </div>
         )}
