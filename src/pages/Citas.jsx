@@ -74,44 +74,47 @@ export default function Citas() {
     recargarDatos();
   }, [recargarDatos]);
 
-  async function reservar() {
+  const reservar = useCallback(async () => {
     if (!user) {
       setMensaje({ tipo: 'error', texto: 'Debes iniciar sesión para confirmar tu reserva.' });
       return;
     }
 
     if (!seleccionado) return;
+
     setEnviando(true);
     setMensaje(null);
-    
+
     try {
       const res = await api.post('/citas/reservar', {
         disponibilidad_id: seleccionado.id,
         motivo_consulta: motivo,
       });
-      
+
       setMensaje({ tipo: 'ok', texto: res.mensaje });
       setSeleccionado(null);
       setMotivo('');
       recargarDatos(); // Recargamos todo tras la reserva
     } catch (err) {
-      setMensaje({ tipo: 'error', texto: err.response?.data?.error || 'Error al procesar la reserva.' });
+      // Mostramos el error del backend si existe, si no, un mensaje genérico.
+      const errorMsg = err.response?.data?.error || err.message || 'Error al procesar la reserva.';
+      setMensaje({ tipo: 'error', texto: errorMsg });
     } finally {
       setEnviando(false);
     }
-  }
+  }, [user, seleccionado, motivo, recargarDatos]);
 
-  // ... (el resto del código: cancelarCita y renderizado permanecen iguales)
-  async function cancelarCita(cita_id) {
+  const cancelarCita = useCallback(async (cita_id) => {
     if (!window.confirm('¿Seguro que quieres cancelar esta cita?')) return;
     try {
       const res = await api.post('/citas/cancelar', { cita_id });
       setMensaje({ tipo: 'ok', texto: res.mensaje });
       recargarDatos();
     } catch (err) {
-      setMensaje({ tipo: 'error', texto: err.message });
+      const errorMsg = err.response?.data?.error || err.message || 'Error al cancelar la cita.';
+      setMensaje({ tipo: 'error', texto: errorMsg });
     }
-  }
+  }, [recargarDatos]);
 
   const diasDisponibles = [...new Set(huecos.map(h => new Date(h.fecha + 'T00:00:00')))];
 
