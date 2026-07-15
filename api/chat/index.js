@@ -1,6 +1,6 @@
 // api/chat/index.js
-// Usa DeepSeek API (gratuito, 500 requests/día, funciona en Vercel)
-// Formato compatible con OpenAI, solo cambia base URL y modelo
+// Usa Cloudflare Workers AI (gratuito: 100k requests/día, sin tarjeta)
+// Modelo: Llama 3.2 3B Instruct de Meta
 import { query, json, requireAuth } from '../_db.js';
 
 export default async function handler(req, res) {
@@ -32,57 +32,75 @@ export default async function handler(req, res) {
     console.error('[chat] BD error:', dbErr.message);
   }
 
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
+  const accountId = process.env.CF_ACCOUNT_ID;
+  const apiToken = process.env.CF_API_TOKEN;
+  if (!accountId || !apiToken) {
     return json(res, 500, {
-      error: 'DEEPSEEK_API_KEY no configurada. Pasos:\n' +
-        '1) Ve a https://platform.deepseek.com/ y crea cuenta (gratis)\n' +
-        '2) Ve a API Keys → "Create API key"\n' +
-        '3) Copia la key y ponla como DEEPSEEK_API_KEY en Vercel'
+      error: 'CF_ACCOUNT_ID y CF_API_TOKEN no configurados. Pasos:\n' +
+        '1) Crea cuenta gratis en cloudflare.com\n' +
+        '2) Ve a Workers & Pages → Workers AI\n' +
+        '3) Copia tu Account ID (en la URL: /account/{ACCOUNT_ID}/workers-ai)\n' +
+        '4) Ve a My Profile → API Tokens → Create Token → Workers AI → Read\n' +
+        '5) Pon CF_ACCOUNT_ID y CF_API_TOKEN en Vercel'
     });
   }
 
   try {
-    const messages = [
-      {
-        role: 'system',
-        content: `Eres "Ori", un asistente terapéutico de orientación psicoeducativa con enfoque socrático.
+    // Construimos mensajes en formato Llama Instruct
+    let prompt = `<s>[INST] <<SYS>>
+Eres "Ori", un asistente terapéutico de orientación psicoeducativa con enfoque socrático.
 
 REGLAS:
 - Eres cálido, empático, paciente. Respondes con preguntas que invitan a reflexionar.
 - NUNCA diagnosticas ni recetas.
 - Empieza con validación emocional corta. Luego 1-2 preguntas. Máximo 4 oraciones.
 - Todo lo que el usuario escriba se usará en terapia para conocerlo mejor.
-- Responde SIEMPRE en español.`
-      },
-      ...(historial || []).slice(-10),
-      { role: 'user', content: mensaje.trim() }
-    ];
+- Responde SIEMPRE en español.
+<</SYS>>
 
-    console.log('[chat] Llamando a DeepSeek...');
-    const resAPI = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages,
-        max_tokens: 300,
-        temperature: 0.7,
-      }),
-    });
+`;
+
+    if (historial && historial.length > 0) {
+      for (const msg of historial.slice(-6)) {
+        const quien = msg.role === 'user' ? 'Usuario' : 'Ori';
+        prompt += `${quien}: ${msg.content}\n`;
+      }
+    }
+
+    prompt += `Usuario: ${mensaje.trim()}\n[/INST]\nOri:`;
+
+    console.log('[chat] Llamando a Cloudflare AI...');
+    const resAPI = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/meta/llama-3.2-3b-instruct`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          max_tokens: 300,
+          temperature: 0.7,
+        }),
+      }
+    );
+
+    const data = await resAPI.json();
 
     if (!resAPI.ok) {
-      let errMsg = `Error ${resAPI.status}`;
-      try { const d = await resAPI.json(); errMsg = d.error?.message || errMsg; } catch {}
-      console.error('[chat] DeepSeek error:', errMsg);
+      const errMsg = data?.errors?.[0]?.message || data?.error || `Error ${resAPI.status}`;
+      console.error('[chat] Cloudflare error:', errMsg);
+
+      if (resAPI.status === 401 || resAPI.status === 403) {
+        return json(res, 502, {
+          error: 'Token inválido. Ve a cloudflare.com → My Profile → API Tokens y crea uno con permiso "Workers AI: Read"'
+        });
+      }
       return json(res, 502, { error: 'Error de la IA: ' + errMsg });
     }
 
-    const data = await resAPI.json();
-    const respuesta = data?.choices?.[0]?.message?.content?.trim() || 'Cuéntame más... ¿qué te hace sentir así?';
+    const respuesta = data?.result?.response?.trim() || 'Cuéntame más... ¿qué te hace sentir así?';
 
     if (conversacion_id) {
       try {
