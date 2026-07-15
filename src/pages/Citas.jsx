@@ -38,28 +38,30 @@ export default function Citas() {
   // a menos que 'user' cambie.
   const recargarDatos = useCallback(async () => {
     setCargando(true);
+    // Se ha refactorizado la carga para que sea más robusta:
+    // 1. Se cargan los huecos disponibles (público).
+    // 2. Si lo anterior tiene éxito y hay un usuario, se cargan sus citas (privado).
+    // Esto evita que un fallo al cargar las citas del usuario impida ver el calendario.
     try {
-      // Carga en paralelo los datos públicos y, si hay usuario, los privados.
-      const promesas = [api.get('/citas/disponibilidad')];
-      if (user) {
-        promesas.push(api.get('/citas/mis-citas'));
-      }
-
-      const [resDisponibilidad, resMisCitas] = await Promise.all(promesas);
-
+      const resDisponibilidad = await api.get('/citas/disponibilidad');
       setHuecos(resDisponibilidad.huecos || []);
 
-      // Si la promesa de misCitas se ejecutó, actualizamos el estado.
-      if (resMisCitas) {
-        setMisCitas(resMisCitas.citas || []);
+      if (user) {
+        // Envolvemos la llamada autenticada en su propio try/catch
+        try {
+          const resMisCitas = await api.get('/citas/mis-citas');
+          setMisCitas(resMisCitas.citas || []);
+        } catch (err) {
+          console.error("Error al cargar las citas del usuario:", err);
+          setMisCitas([]); // Si falla, nos aseguramos de que la lista esté vacía.
+        }
       } else {
-        // Si no, nos aseguramos de que esté vacío (caso de cierre de sesión).
         setMisCitas([]);
       }
-
     } catch (err) {
-      console.error("Error al cargar datos:", err);
-      // Si falla la carga (p. ej. token expirado), limpiamos las citas del usuario.
+      // Este error es solo si falla la llamada pública a /disponibilidad
+      console.error("Error al cargar la disponibilidad de citas:", err);
+      setHuecos([]);
       setMisCitas([]);
     } finally {
       setCargando(false);
@@ -122,7 +124,11 @@ export default function Citas() {
   const huecosDelDia = huecos?.filter(h => h.fecha === fechaComparar) || [];
 
   return (
-    <div className="sm:pl-52 pb-24 max-w-2xl p-4">
+    // Añadimos una 'key' que cambia con el estado de autenticación.
+    // Esto fuerza a React a remontar el componente al iniciar/cerrar sesión,
+    // reseteando su estado interno y evitando problemas de sincronización.
+    // El ID del usuario se usa para crear una clave única por usuario.
+    <div key={user?.id || 'anonimo'} className="sm:pl-52 pb-24 max-w-2xl p-4">
       <h1 className="text-2xl font-bold text-stone-800 mb-1">Consulta con Antonio</h1>
       <p className="text-stone-500 text-sm mb-8">Reserva una sesión de videollamada.</p>
 
