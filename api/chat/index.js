@@ -88,7 +88,18 @@ IDIOMA: Responde siempre en español, adaptándote al nivel del usuario.`
     if (!openaiRes.ok) {
       const errText = await openaiRes.text();
       console.error('[chat] OpenAI error:', openaiRes.status, errText);
-      return json(res, 502, { error: 'Error al contactar con la IA.' });
+      let mensajeError = 'Error al contactar con la IA.';
+      if (openaiRes.status === 401) {
+        mensajeError = 'La API Key de OpenAI no es válida. Revisa OPENAI_API_KEY en Vercel.';
+      } else if (openaiRes.status === 429) {
+        mensajeError = 'La IA está sobrecargada. Espera un momento y vuelve a intentarlo.';
+      } else if (errText) {
+        try {
+          const parsed = JSON.parse(errText);
+          mensajeError = parsed.error?.message || mensajeError;
+        } catch {}
+      }
+      return json(res, 502, { error: mensajeError });
     }
 
     const data = await openaiRes.json();
