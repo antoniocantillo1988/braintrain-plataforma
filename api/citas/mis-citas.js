@@ -3,7 +3,9 @@ import { query, json, requireAuth } from '../_db.js';
 
 export default async function handler(req, res) {
   const user = requireAuth(req, res);
-  if (!user) return;
+  if (!user) {
+    return json(res, 401, { error: 'No autenticado. Inicia sesión.' });
+  }
   if (req.method !== 'GET') return json(res, 405, { error: 'Método no permitido' });
 
   try {

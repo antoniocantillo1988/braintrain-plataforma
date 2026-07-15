@@ -1,7 +1,8 @@
 // api/_db.js
 import mysql from 'mysql2/promise';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
+import { scrypt, randomBytes, timingSafeEqual } from 'crypto';
+import { promisify } from 'util';
 
 // ─── Base de datos ───────────────────────────────────────────
 let pool;
@@ -31,20 +32,32 @@ export async function query(sql, params = []) {
   return rows;
 }
 
+const scryptAsync = promisify(scrypt);
+
 // ─── Contraseñas ───────────
-export function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+// Usamos la versión asíncrona de scrypt para no bloquear el event loop,
+// lo que es crítico en entornos serverless como Vercel.
+export async function hashPassword(password) {
+  const salt = randomBytes(16).toString('hex');
+  const hash = (await scryptAsync(password, salt, 64)).toString('hex');
   return `scrypt:${salt}:${hash}`;
 }
 
-export function verifyPassword(password, stored) {
-  if (!stored.startsWith('scrypt:')) {
-    return password === stored;
+export async function verifyPassword(password, stored) {
+  if (!stored || !stored.startsWith('scrypt:')) {
+    // Si no hay hash o el formato es incorrecto, no se puede verificar.
+    return false;
   }
   const [, salt, hash] = stored.split(':');
-  const hashVerify = crypto.scryptSync(password, salt, 64).toString('hex');
-  return hash === hashVerify;
+  const hashToCompare = Buffer.from(hash, 'hex');
+  const derivedKey = (await scryptAsync(password, salt, 64));
+
+  // Comparamos los hashes de forma segura para prevenir ataques de temporización.
+  // Nos aseguramos de que los buffers tengan la misma longitud.
+  if (hashToCompare.length !== derivedKey.length) {
+    return false;
+  }
+  return timingSafeEqual(hashToCompare, derivedKey);
 }
 
 // ─── Tokens JWT ──
@@ -73,12 +86,10 @@ export function verifyToken(req) {
   }
 }
 
+// Esta función ahora solo verifica el token y devuelve el payload o null.
+// Ya no envía una respuesta HTTP, eliminando efectos secundarios.
 export function requireAuth(req, res) {
   const user = verifyToken(req);
-  if (!user) {
-    res.status(401).json({ error: 'No autenticado. Inicia sesión.' });
-    return null;
-  }
   return user;
 }
 

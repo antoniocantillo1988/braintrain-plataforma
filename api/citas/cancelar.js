@@ -6,8 +6,10 @@ import nodemailer from 'nodemailer';
 export default async function handler(req, res) {
   // 1. Verificamos autenticación
   const user = requireAuth(req, res);
-  if (!user) return;
-  
+  if (!user) {
+    return json(res, 401, { error: 'No autenticado. Inicia sesión.' });
+  }
+
   // 2. Verificamos método
   if (req.method !== 'POST') {
     return json(res, 405, { error: 'Método no permitido' });

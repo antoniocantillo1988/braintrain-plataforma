@@ -7,7 +7,9 @@ export default async function handler(req, res) {
   // Se restaura la llamada a requireAuth, que ahora funciona correctamente
   // gracias a los cambios en _db.js.
   const user = requireAuth(req, res);
-  if (!user) return;
+  if (!user) {
+    return json(res, 401, { error: 'No autenticado. Inicia sesión.' });
+  }
   if (req.method !== 'POST') return json(res, 405, { error: 'Método no permitido' });
 
   const { disponibilidad_id, motivo_consulta } = req.body || {};
