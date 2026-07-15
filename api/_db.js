@@ -1,7 +1,7 @@
 // api/_db.js
 import mysql from 'mysql2/promise';
 import jwt from 'jsonwebtoken';
-import { promises as cryptoPromises, randomBytes, timingSafeEqual } from 'crypto';
+import crypto from 'crypto';
 
 // ─── Base de datos ───────────────────────────────────────────
 let pool;
@@ -30,31 +30,30 @@ export async function query(sql, params = []) {
 }
 
 // ─── Contraseñas ───────────
-// Usamos la versión asíncrona de scrypt para no bloquear el event loop,
-// lo que es crítico en entornos serverless como Vercel.
-export async function hashPassword(password) {
-  const salt = randomBytes(16).toString('hex');
-  // Usamos la API de promesas nativa de crypto, que es más robusta.
-  const hash = (await cryptoPromises.scrypt(password, salt, 64)).toString('hex');
+// Se revierte a la versión síncrona para solucionar el error 'FUNCTION_INVOCATION_FAILED'.
+// Esto es más estable en algunos entornos de Vercel, aunque menos performante.
+export function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
   return `scrypt:${salt}:${hash}`;
 }
 
-export async function verifyPassword(password, stored) {
+export function verifyPassword(password, stored) {
   if (!stored || !stored.startsWith('scrypt:')) {
     // Si no hay hash o el formato es incorrecto, no se puede verificar.
     return false;
   }
   const [, salt, hash] = stored.split(':');
   const hashToCompare = Buffer.from(hash, 'hex');
-  // Usamos la API de promesas nativa de crypto.
-  const derivedKey = (await cryptoPromises.scrypt(password, salt, 64));
+  // Usamos la versión síncrona.
+  const derivedKey = crypto.scryptSync(password, salt, 64);
 
   // Comparamos los hashes de forma segura para prevenir ataques de temporización.
   // Nos aseguramos de que los buffers tengan la misma longitud.
   if (hashToCompare.length !== derivedKey.length) {
     return false;
   }
-  return timingSafeEqual(hashToCompare, derivedKey);
+  return crypto.timingSafeEqual(hashToCompare, derivedKey);
 }
 
 // ─── Tokens JWT ──
