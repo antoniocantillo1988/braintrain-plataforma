@@ -10,12 +10,12 @@ function getPool() {
   if (!pool) {
     pool = mysql.createPool({
       host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT || '4000'),
+      port: parseInt(process.env.DB_PORT || '3306'),
       database: process.env.DB_DATABASE || process.env.DB_NAME || 'test',
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      // Se simplifica la configuración SSL para máxima compatibilidad con proveedores cloud como PlanetScale.
-      ssl: { "rejectUnauthorized": true },
+      // Se pasa la configuración SSL como un string JSON para máxima compatibilidad en Vercel.
+      ssl: '{"rejectUnauthorized":true}',
       waitForConnections: true,
       connectionLimit: 5,
       dateStrings: true,
