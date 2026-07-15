@@ -1,5 +1,5 @@
 // api/_calendar.js
-const { google } = require('googleapis');
+import { google } from 'googleapis'; // Asegúrate de tener la librería instalada
 
 function getCalendarClient() {
   const auth = new google.auth.OAuth2(
@@ -16,7 +16,7 @@ function getCalendarClient() {
 }
 
 // Crea un evento en Google Calendar con enlace de Meet automático
-async function crearEventoCalendar({ fecha, hora_inicio, hora_fin, nombre_usuario, email_usuario, motivo }) {
+export async function crearEventoCalendar({ fecha, hora_inicio, hora_fin, nombre_usuario, email_usuario, motivo }) {
   const calendar = getCalendarClient();
 
   // Cambiamos a este formato para asegurar que Google Calendar lo tome bien:
@@ -64,7 +64,7 @@ async function crearEventoCalendar({ fecha, hora_inicio, hora_fin, nombre_usuari
 }
 
 // Cancela un evento en Google Calendar
-async function cancelarEventoCalendar(evento_id) {
+export async function cancelarEventoCalendar(evento_id) {
   const calendar = getCalendarClient();
   await calendar.events.delete({
     calendarId: 'primary',
@@ -72,5 +72,3 @@ async function cancelarEventoCalendar(evento_id) {
     sendUpdates: 'all',
   });
 }
-
-module.exports = { crearEventoCalendar, cancelarEventoCalendar };
