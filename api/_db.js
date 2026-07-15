@@ -1,6 +1,6 @@
 // api/_db.js
-const mysql = require('mysql2/promise');
-const crypto = require('crypto'); // viene con Node.js, sin instalar nada
+import mysql from 'mysql2/promise';
+import crypto from 'crypto';
 
 // ─── Base de datos ───────────────────────────────────────────
 let pool;
@@ -10,36 +10,34 @@ function getPool() {
     pool = mysql.createPool({
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || '4000'),
-      database: process.env.DB_DATABASE || process.env.DB_NAME || 'test', // CORREGIDO para que lea la variable de Vercel
+      database: process.env.DB_DATABASE || process.env.DB_NAME || 'test',
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      // AÑADIDO: Seguridad SSL obligatoria para TiDB
       ssl: {
         minVersion: 'TLSv1.2',
         rejectUnauthorized: true
       },
       waitForConnections: true,
       connectionLimit: 5,
-      dateStrings: true, // <--- ESTO RECOGE SOLO LA FECHA PARA INTRODUCIR LA CITA
+      dateStrings: true,
     });
   }
   return pool;
 }
 
-async function query(sql, params = []) {
+export async function query(sql, params = []) {
   const [rows] = await getPool().execute(sql, params);
   return rows;
 }
 
-// ─── Contraseñas (sin bcryptjs, usa crypto nativo) ───────────
-function hashPassword(password) {
+// ─── Contraseñas ───────────
+export function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.scryptSync(password, salt, 64).toString('hex');
   return `scrypt:${salt}:${hash}`;
 }
 
-function verifyPassword(password, stored) {
-  // Contraseña en texto plano (usuarios legacy de la BD original)
+export function verifyPassword(password, stored) {
   if (!stored.startsWith('scrypt:')) {
     return password === stored;
   }
@@ -48,19 +46,19 @@ function verifyPassword(password, stored) {
   return hash === hashVerify;
 }
 
-// ─── Tokens JWT casero (sin jsonwebtoken, usa crypto nativo) ──
-function createToken(payload) {
+// ─── Tokens JWT ──
+export function createToken(payload) {
   const secret = process.env.JWT_SECRET;
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const body = Buffer.from(JSON.stringify({
     ...payload,
-    exp: Math.floor(Date.now() / 1000) + 7 * 24 * 3600 // 7 días
+    exp: Math.floor(Date.now() / 1000) + 7 * 24 * 3600 
   })).toString('base64url');
   const sig = crypto.createHmac('sha256', secret).update(`${header}.${body}`).digest('base64url');
   return `${header}.${body}.${sig}`;
 }
 
-function verifyToken(req) {
+export function verifyToken(req) {
   try {
     const auth = req.headers['authorization'];
     if (!auth || !auth.startsWith('Bearer ')) return null;
@@ -79,7 +77,7 @@ function verifyToken(req) {
   }
 }
 
-function requireAuth(req, res) {
+export function requireAuth(req, res) {
   const user = verifyToken(req);
   if (!user) {
     res.status(401).json({ error: 'No autenticado. Inicia sesión.' });
@@ -88,8 +86,6 @@ function requireAuth(req, res) {
   return user;
 }
 
-function json(res, status, data) {
+export function json(res, status, data) {
   res.status(status).json(data);
 }
-
-module.exports = { query, json, hashPassword, verifyPassword, createToken, verifyToken, requireAuth };
