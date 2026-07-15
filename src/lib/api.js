@@ -5,9 +5,10 @@
 const BASE = import.meta.env.VITE_API_BASE || '/api';
 
 export async function apiFetch(path, options = {}) {
-  const token = localStorage.getItem('orienta_token');
+  const token = localStorage.getItem('token');
 
   const headers = {
+    'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,

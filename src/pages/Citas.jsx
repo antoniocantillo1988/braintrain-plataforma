@@ -18,6 +18,7 @@ const ESTADO_ESTILOS = {
   completada: 'bg-stone-100 text-stone-500',
 };
 
+// src/pages/Citas.jsx
 export default function Citas() {
   const [huecos, setHuecos] = useState([]);
   const [misCitas, setMisCitas] = useState([]);
@@ -29,48 +30,37 @@ export default function Citas() {
   const [mensaje, setMensaje] = useState(null);
   const [user, setUser] = useState(null); 
 
-  // Límite de 2 horas definido dentro del componente
   const limiteReserva = new Date(Date.now() + 2 * 60 * 60 * 1000);
 
   useEffect(() => { 
+    // Detectamos el token correctamente al cargar
     const token = localStorage.getItem('token'); 
-    if (token) setUser({ id: 1 });
+    if (token) setUser({ token }); // Almacenamos un objeto real
     
-    // Carga inicial (siempre carga disponibilidad)
     cargarDatos(); 
   }, []);
-
-  // REACCIÓN: Este efecto detecta cuando el usuario está disponible y recarga sus citas
-  useEffect(() => {
-    if (user) {
-      cargarCitasUsuario();
-    }
-  }, [user]);
 
   async function cargarDatos() {
     setCargando(true);
     try {
+      // 1. Carga pública
       const d = await api.get('/citas/disponibilidad');
       setHuecos(d.huecos || []);
+      
+      // 2. Carga privada: Solo si existe el token en localStorage
+      if (localStorage.getItem('token')) {
+        const c = await api.get('/citas/mis-citas');
+        setMisCitas(c.citas || []);
+      }
     } catch (err) {
-      setMensaje({ tipo: 'error', texto: err.message });
+      console.error("Error al cargar datos:", err);
     } finally {
       setCargando(false);
     }
   }
 
-  // Nueva función separada para obtener las citas privadas
-  async function cargarCitasUsuario() {
-    try {
-      const c = await api.get('/citas/mis-citas');
-      setMisCitas(c.citas || []);
-    } catch (err) {
-      console.error("Error al cargar citas del usuario:", err);
-    }
-  }
-
   async function reservar() {
-    if (!user) {
+    if (!localStorage.getItem('token')) {
       setMensaje({ tipo: 'error', texto: 'Debes iniciar sesión para confirmar tu reserva.' });
       return;
     }
@@ -88,15 +78,15 @@ export default function Citas() {
       setMensaje({ tipo: 'ok', texto: res.mensaje });
       setSeleccionado(null);
       setMotivo('');
-      cargarDatos();
-      cargarCitasUsuario();
+      cargarDatos(); // Recargamos todo tras la reserva
     } catch (err) {
-      setMensaje({ tipo: 'error', texto: err.message || 'Error al procesar la reserva.' });
+      setMensaje({ tipo: 'error', texto: err.response?.data?.error || 'Error al procesar la reserva.' });
     } finally {
       setEnviando(false);
     }
   }
 
+  // ... (el resto del código: cancelarCita y renderizado permanecen iguales)
   async function cancelarCita(cita_id) {
     if (!window.confirm('¿Seguro que quieres cancelar esta cita?')) return;
     try {
