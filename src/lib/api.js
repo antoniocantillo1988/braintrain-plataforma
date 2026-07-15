@@ -7,12 +7,17 @@ const BASE = import.meta.env.VITE_API_BASE || '/api';
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem('token');
 
+  // Se construye la cabecera base.
   const headers = {
-    'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
+
+  // Se añade el token de autorización solo si existe.
+  // Esto evita enviar 'Authorization: Bearer null' en peticiones autenticadas.
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   const res = await fetch(`${BASE}${path}`, {
     ...options,
