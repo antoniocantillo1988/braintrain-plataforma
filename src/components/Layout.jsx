@@ -1,6 +1,6 @@
 // src/components/Layout.jsx
-import { useAuth } from '../context/AuthContext'; // Importamos el contexto
-import { MessageSquare, Brain, BookOpen, Calendar, Home, LogOut, Phone } from 'lucide-react';
+//import { useAuth } from '../context/AuthContext'; // Importamos el contexto
+//import { MessageSquare, Brain, BookOpen, Calendar, Home, LogOut, Phone } from 'lucide-react';
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth(); // Obtenemos usuario y función de logout
