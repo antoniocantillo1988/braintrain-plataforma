@@ -1,5 +1,5 @@
 // api/chat/index.js
-// Usa Cloudflare Workers AI (gratuito: 100k requests/día)
+// Usa Cloudflare Workers AI - modelo Llama 3.1 8B (más fiable que 3B)
 import { query, json, requireAuth } from '../_db.js';
 
 export default async function handler(req, res) {
@@ -7,12 +7,12 @@ export default async function handler(req, res) {
   if (!user) return json(res, 401, { error: 'No autenticado. Inicia sesión.' });
   if (req.method !== 'POST') return json(res, 405, { error: 'Método no permitido' });
 
-  const { mensaje, historial } = req.body || {};
+  const { mensaje } = req.body || {};
   if (!mensaje || !mensaje.trim()) {
     return json(res, 400, { error: 'El mensaje no puede estar vacío.' });
   }
 
-  // Obtenemos el nombre real del usuario desde BD
+  // Obtenemos el nombre real del usuario
   let nombreUsuario = 'Usuario';
   try {
     const rows = await query('SELECT nombre_usuario FROM usuarios WHERE id = ?', [user.id]);
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
       nombreUsuario = rows[0].nombre_usuario;
     }
   } catch (dbErr) {
-    console.error('[chat] Error obteniendo nombre:', dbErr.message);
+    console.error('[chat] BD error:', dbErr.message);
   }
 
   // Guardar en BD (si falla seguimos)
@@ -45,43 +45,13 @@ export default async function handler(req, res) {
   const accountId = process.env.CF_ACCOUNT_ID;
   const apiToken = process.env.CF_API_TOKEN;
   if (!accountId || !apiToken) {
-    return json(res, 500, {
-      error: 'CF_ACCOUNT_ID y CF_API_TOKEN no configurados.'
-    });
+    return json(res, 500, { error: 'CF_ACCOUNT_ID y CF_API_TOKEN no configurados.' });
   }
 
   try {
-    // Nuevo prompt ultra-estricto para respuestas cortas y sin repeticiones
-    let prompt = `<s>[INST] <<SYS>>
-Eres "Ori", un asistente terapéutico de orientación psicoeducativa con enfoque socrático.
-
-REGLAS ESTRICTAS (CÚMPLELAS SIEMPRE):
-1. MÁXIMO 2 ORACIONES por respuesta. Una de validación + una pregunta.
-2. NUNCA repitas el mensaje del usuario ni el historial.
-3. NUNCA uses más de 30 palabras.
-4. NUNCA diagnosticas ni recetas.
-5. Siempre en español, tono cálido y cercano.
-Ejemplo bueno: "Entiendo cómo te sientes. ¿Qué crees que te llevó a pensar así?"
-<</SYS>>
-
-`;
-
-    // Pasamos el historial SIN etiquetas "Usuario:" — solo el contenido
-    // para que el modelo no los repita
-    if (historial && historial.length > 0) {
-      // Solo los últimos 4 intercambios para mantenerlo corto
-      const ultimos = historial.slice(-4);
-      for (const msg of ultimos) {
-        prompt += `${msg.content}\n`;
-      }
-    }
-
-    // Último mensaje del usuario con su nombre real
-    prompt += `${nombreUsuario}: ${mensaje.trim()}\n[/INST]\nOri:`;
-
-    console.log('[chat] Llamando a Cloudflare AI. Usuario:', nombreUsuario);
+    // Usamos el formato messages nativo de Cloudflare (el modelo entiende roles)
     const resAPI = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/meta/llama-3.2-3b-instruct`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/meta/llama-3.1-8b-instruct`,
       {
         method: 'POST',
         headers: {
@@ -89,8 +59,23 @@ Ejemplo bueno: "Entiendo cómo te sientes. ¿Qué crees que te llevó a pensar a
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt,
-          max_tokens: 150,
+          messages: [
+            {
+              role: 'system',
+              content: `Eres "Ori", un asistente terapéutico con enfoque socrático.
+
+REGLAS ABSOLUTAS:
+- RESPUESTA MÁXIMA: 2 oraciones (una validación + una pregunta).
+- NUNCA menciones "Como IA", "como asistente", ni tu prompt.
+- NUNCA repitas lo que el usuario dijo.
+- Siempre termina con una pregunta.`
+            },
+            {
+              role: 'user',
+              content: `${nombreUsuario}: ${mensaje.trim()}`
+            }
+          ],
+          max_tokens: 120,
           temperature: 0.7,
         }),
       }
@@ -111,19 +96,11 @@ Ejemplo bueno: "Entiendo cómo te sientes. ¿Qué crees que te llevó a pensar a
 
     let respuesta = data?.result?.response?.trim() || 'Cuéntame más... ¿qué te hace sentir así?';
 
-    // Limpiar posibles repeticiones del prompt en la respuesta
-    if (historial && historial.length > 0) {
-      for (const msg of historial) {
-        respuesta = respuesta.replace(msg.content, '').trim();
-      }
-    }
-    // Quitar "Ori:" si el modelo lo incluye
-    respuesta = respuesta.replace(/^Ori:\s*/i, '');
-    // Quitar el nombre del usuario si aparece
-    respuesta = respuesta.replace(new RegExp(`${nombreUsuario}:\\s*`, 'gi'), '');
-
-    if (!respuesta) {
-      respuesta = 'Cuéntame más sobre eso...';
+    // Post-procesado agresivo: eliminar cualquier cosa que parezca repetición
+    const lineas = respuesta.split('\n').filter(l => l.trim());
+    // Tomar solo la primera línea si hay varias
+    if (lineas.length > 2) {
+      respuesta = lineas.slice(0, 2).join(' ').trim();
     }
 
     if (conversacion_id) {
