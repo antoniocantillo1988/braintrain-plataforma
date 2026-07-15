@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   try {
     // 2. Buscamos por email O por nombre_usuario
     const rows = await query(
-      'SELECT id, email, password_legacy, nombre_usuario, tipo FROM usuarios WHERE email = ? OR nombre_usuario = ?',
+      'SELECT id, email, password, nombre_usuario, tipo FROM usuarios WHERE email = ? OR nombre_usuario = ?',
       [identificador.toLowerCase(), identificador] 
     );
 
@@ -26,14 +26,14 @@ export default async function handler(req, res) {
     const user = rows[0];
     
     // 4. Verificamos la contraseña
-    const valid = verifyPassword(password, user.password_legacy);
+    const valid = verifyPassword(password, user.password);
     if (!valid) {
       return json(res, 401, { error: 'Credenciales incorrectas.' });
     }
 
     // 5. Migración a hash seguro si es necesario
-    if (!user.password_legacy.startsWith('scrypt:')) {
-      await query('UPDATE usuarios SET password_legacy = ? WHERE id = ?', [hashPassword(password), user.id]);
+    if (!user.password.startsWith('scrypt:')) {
+      await query('UPDATE usuarios SET password = ? WHERE id = ?', [hashPassword(password), user.id]);
     }
 
     // 6. Creamos el token

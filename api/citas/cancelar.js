@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   try {
     // 3. Buscamos la cita y el nombre del usuario para el aviso
     const citas = await query(
-      `SELECT c.disponibilidad_id, u.nombre_usuario 
+      `SELECT c.disponibilidad_id, c.google_evento_id, u.nombre_usuario 
        FROM citas c 
        JOIN usuarios u ON c.usuario_id = u.id 
        WHERE c.id = ? AND c.usuario_id = ? AND c.estado = "confirmada"`,
@@ -34,7 +34,16 @@ export default async function handler(req, res) {
       return json(res, 404, { error: 'Cita no encontrada o ya está cancelada.' });
     }
 
-    const { disponibilidad_id, nombre_usuario } = citas[0];
+    const { disponibilidad_id, google_evento_id, nombre_usuario } = citas[0];
+
+    // 4. Intentamos cancelar en Google Calendar
+    if (google_evento_id) {
+      try {
+        await cancelarEventoCalendar(google_evento_id);
+      } catch (googleErr) {
+        console.error('[cancelar] Error al borrar de Google:', googleErr.message);
+      }
+    }
 
     // 5. Liberamos el hueco de disponibilidad
     await query('UPDATE disponibilidad SET ocupado = 0 WHERE id = ?', [disponibilidad_id]);

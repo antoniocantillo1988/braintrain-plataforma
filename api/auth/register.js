@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     }
 
     const result = await query(
-      'INSERT INTO usuarios (email, password_legacy, nombre_usuario, tipo) VALUES (?, ?, ?, 0)',
+      'INSERT INTO usuarios (email, password, nombre_usuario, tipo) VALUES (?, ?, ?, 0)',
       [email.toLowerCase(), hashPassword(password), nombre_usuario.trim()]
     );
 

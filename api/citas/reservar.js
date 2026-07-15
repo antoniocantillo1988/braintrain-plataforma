@@ -62,9 +62,9 @@ export default async function handler(req, res) {
     // Guardamos la cita en la BD con el enlace de Meet ya incluido
     await query(
       `INSERT INTO citas 
-        (usuario_id, disponibilidad_id, motivo_consulta, estado, enlace_videollamada)
-       VALUES (?, ?, ?, 'confirmada', ?)`,
-      [user.id, disponibilidad_id, motivo_consulta || '', eventoGoogle.enlace_meet]
+        (usuario_id, disponibilidad_id, motivo_consulta, estado, google_evento_id, enlace_videollamada)
+       VALUES (?, ?, ?, 'confirmada', ?, ?)`,
+      [user.id, disponibilidad_id, motivo_consulta || '', eventoGoogle.evento_id, eventoGoogle.enlace_meet]
     );
 
     // Marcamos el hueco como ocupado
