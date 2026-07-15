@@ -10,8 +10,8 @@ export default async function handler(req, res) {
 
   try {
     const citas = await query(
-      `SELECT c.id, c.estado, c.motivo_consulta, c.enlace_meet,
-              c.google_evento_id, c.creado_en,
+      `SELECT c.id, c.estado, c.motivo_consulta, c.enlace_videollamada,
+              c.creado_en,
               d.fecha, d.hora_inicio, d.hora_fin
        FROM citas c
        JOIN disponibilidad d ON c.disponibilidad_id = d.id

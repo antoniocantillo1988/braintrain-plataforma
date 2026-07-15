@@ -1,10 +1,10 @@
 // api/admin/huecos.js
-const { query, json, requireAuth } = require('../_db');
+import { query, json, requireAuth } from '../_db.js';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   const user = requireAuth(req, res);
   if (!user) return;
-  if (user.tipo !== 'admin') return json(res, 403, { error: 'Acceso denegado.' });
+  if (user.tipo !== 1) return json(res, 403, { error: 'Acceso denegado.' });
 
   // POST - crear hueco
   if (req.method === 'POST') {

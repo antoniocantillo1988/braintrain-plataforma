@@ -5,7 +5,7 @@
 const BASE = import.meta.env.VITE_API_BASE || '/api';
 
 export async function apiFetch(path, options = {}) {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('orienta_token');
 
   // Se construye la cabecera base.
   const headers = {

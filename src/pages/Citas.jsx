@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DayPicker } from 'react-day-picker';
 import { es } from 'date-fns/locale';
-import 'react-day-picker/dist/style.css';
+import 'react-day-picker/style.css';
 import { api } from '../lib/api';
 
 import { useAuth } from '../context/AuthContext';
@@ -143,10 +143,15 @@ export default function Citas() {
           onSelect={setDiaSeleccionado}
           locale={es}
           modifiers={{ disponible: diasDisponibles }}
-          modifiersStyles={{
-            disponible: { color: '#0f766e', fontWeight: 'bold', border: '1px solid #0f766e' }
-          }}
+          modifiersClassNames={{ disponible: 'dia-disponible' }}
         />
+        <style>{`
+          .rdp-day.dia-disponible {
+            color: #0f766e !important;
+            font-weight: bold !important;
+            border: 1px solid #0f766e !important;
+          }
+        `}</style>
       </section>
 
       {/* ── Huecos del día seleccionado ── */}
