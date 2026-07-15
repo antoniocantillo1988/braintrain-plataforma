@@ -20,6 +20,8 @@ export default async function handler(req, res) {
   const { disponibilidad_id, motivo_consulta } = req.body || {};
   if (!disponibilidad_id) return json(res, 400, { error: 'Falta el hueco seleccionado.' });
 
+  let google_evento_id_creado = null; // Variable para rastrear el evento de Google
+
   try {
     // Comprobamos que el hueco sigue libre
     const huecos = await query(
@@ -52,7 +54,7 @@ export default async function handler(req, res) {
     const { nombre_usuario, email } = usuarios[0];
 
     // Creamos el evento en Google Calendar con Meet automático
-    const { evento_id, enlace_meet } = await crearEventoCalendar({
+    const eventoGoogle = await crearEventoCalendar({
       fecha:          hueco.fecha,
       hora_inicio:    hueco.hora_inicio,
       hora_fin:       hueco.hora_fin,
@@ -60,13 +62,14 @@ export default async function handler(req, res) {
       email_usuario:  email,
       motivo:         motivo_consulta || '',
     });
+    google_evento_id_creado = eventoGoogle.evento_id; // Guardamos el ID por si necesitamos revertir
 
     // Guardamos la cita en la BD con el enlace de Meet ya incluido
     await query(
       `INSERT INTO citas 
         (usuario_id, disponibilidad_id, motivo_consulta, estado, google_evento_id, enlace_meet)
        VALUES (?, ?, ?, 'confirmada', ?, ?)`,
-      [user.id, disponibilidad_id, motivo_consulta || '', evento_id, enlace_meet]
+      [user.id, disponibilidad_id, motivo_consulta || '', eventoGoogle.evento_id, eventoGoogle.enlace_meet]
     );
 
     // Marcamos el hueco como ocupado
@@ -97,12 +100,21 @@ export default async function handler(req, res) {
 
     return json(res, 201, {
       ok: true,
-      enlace_meet,
+      enlace_meet: eventoGoogle.enlace_meet,
       mensaje: '✅ Cita confirmada. Recibirás un email con el enlace de Google Meet.',
     });
 
   } catch (err) {
     console.error('[reservar]', err.message);
+
+    // --- LÓGICA DE REVERSIÓN ---
+    // Si se creó un evento en Google pero algo falló después, lo cancelamos.
+    if (google_evento_id_creado) {
+      console.log(`[reservar] Intentando revertir la creación del evento de Google: ${google_evento_id_creado}`);
+      await cancelarEventoCalendar(google_evento_id_creado).catch(revertErr => {
+        console.error('[reservar] Error crítico al intentar revertir el evento de Google:', revertErr.message);
+      });
+    }
     return json(res, 500, { error: 'Error al crear la cita: ' + err.message });
   }
 }
