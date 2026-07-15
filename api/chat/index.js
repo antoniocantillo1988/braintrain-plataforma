@@ -1,6 +1,5 @@
 // api/chat/index.js
-// Usa Cloudflare Workers AI (gratuito: 100k requests/día, sin tarjeta)
-// Modelo: Llama 3.2 3B Instruct de Meta
+// Usa Cloudflare Workers AI (gratuito: 100k requests/día)
 import { query, json, requireAuth } from '../_db.js';
 
 export default async function handler(req, res) {
@@ -11,6 +10,17 @@ export default async function handler(req, res) {
   const { mensaje, historial } = req.body || {};
   if (!mensaje || !mensaje.trim()) {
     return json(res, 400, { error: 'El mensaje no puede estar vacío.' });
+  }
+
+  // Obtenemos el nombre real del usuario desde BD
+  let nombreUsuario = 'Usuario';
+  try {
+    const rows = await query('SELECT nombre_usuario FROM usuarios WHERE id = ?', [user.id]);
+    if (rows.length > 0 && rows[0].nombre_usuario) {
+      nombreUsuario = rows[0].nombre_usuario;
+    }
+  } catch (dbErr) {
+    console.error('[chat] Error obteniendo nombre:', dbErr.message);
   }
 
   // Guardar en BD (si falla seguimos)
@@ -36,40 +46,40 @@ export default async function handler(req, res) {
   const apiToken = process.env.CF_API_TOKEN;
   if (!accountId || !apiToken) {
     return json(res, 500, {
-      error: 'CF_ACCOUNT_ID y CF_API_TOKEN no configurados. Pasos:\n' +
-        '1) Crea cuenta gratis en cloudflare.com\n' +
-        '2) Ve a Workers & Pages → Workers AI\n' +
-        '3) Copia tu Account ID (en la URL: /account/{ACCOUNT_ID}/workers-ai)\n' +
-        '4) Ve a My Profile → API Tokens → Create Token → Workers AI → Read\n' +
-        '5) Pon CF_ACCOUNT_ID y CF_API_TOKEN en Vercel'
+      error: 'CF_ACCOUNT_ID y CF_API_TOKEN no configurados.'
     });
   }
 
   try {
-    // Construimos mensajes en formato Llama Instruct
+    // Nuevo prompt ultra-estricto para respuestas cortas y sin repeticiones
     let prompt = `<s>[INST] <<SYS>>
 Eres "Ori", un asistente terapéutico de orientación psicoeducativa con enfoque socrático.
 
-REGLAS:
-- Eres cálido, empático, paciente. Respondes con preguntas que invitan a reflexionar.
-- NUNCA diagnosticas ni recetas.
-- Empieza con validación emocional corta. Luego 1-2 preguntas. Máximo 4 oraciones.
-- Todo lo que el usuario escriba se usará en terapia para conocerlo mejor.
-- Responde SIEMPRE en español.
+REGLAS ESTRICTAS (CÚMPLELAS SIEMPRE):
+1. MÁXIMO 2 ORACIONES por respuesta. Una de validación + una pregunta.
+2. NUNCA repitas el mensaje del usuario ni el historial.
+3. NUNCA uses más de 30 palabras.
+4. NUNCA diagnosticas ni recetas.
+5. Siempre en español, tono cálido y cercano.
+Ejemplo bueno: "Entiendo cómo te sientes. ¿Qué crees que te llevó a pensar así?"
 <</SYS>>
 
 `;
 
+    // Pasamos el historial SIN etiquetas "Usuario:" — solo el contenido
+    // para que el modelo no los repita
     if (historial && historial.length > 0) {
-      for (const msg of historial.slice(-6)) {
-        const quien = msg.role === 'user' ? 'Usuario' : 'Ori';
-        prompt += `${quien}: ${msg.content}\n`;
+      // Solo los últimos 4 intercambios para mantenerlo corto
+      const ultimos = historial.slice(-4);
+      for (const msg of ultimos) {
+        prompt += `${msg.content}\n`;
       }
     }
 
-    prompt += `Usuario: ${mensaje.trim()}\n[/INST]\nOri:`;
+    // Último mensaje del usuario con su nombre real
+    prompt += `${nombreUsuario}: ${mensaje.trim()}\n[/INST]\nOri:`;
 
-    console.log('[chat] Llamando a Cloudflare AI...');
+    console.log('[chat] Llamando a Cloudflare AI. Usuario:', nombreUsuario);
     const resAPI = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/meta/llama-3.2-3b-instruct`,
       {
@@ -80,7 +90,7 @@ REGLAS:
         },
         body: JSON.stringify({
           prompt,
-          max_tokens: 300,
+          max_tokens: 150,
           temperature: 0.7,
         }),
       }
@@ -91,7 +101,6 @@ REGLAS:
     if (!resAPI.ok) {
       const errMsg = data?.errors?.[0]?.message || data?.error || `Error ${resAPI.status}`;
       console.error('[chat] Cloudflare error:', errMsg);
-
       if (resAPI.status === 401 || resAPI.status === 403) {
         return json(res, 502, {
           error: 'Token inválido. Ve a cloudflare.com → My Profile → API Tokens y crea uno con permiso "Workers AI: Read"'
@@ -100,7 +109,22 @@ REGLAS:
       return json(res, 502, { error: 'Error de la IA: ' + errMsg });
     }
 
-    const respuesta = data?.result?.response?.trim() || 'Cuéntame más... ¿qué te hace sentir así?';
+    let respuesta = data?.result?.response?.trim() || 'Cuéntame más... ¿qué te hace sentir así?';
+
+    // Limpiar posibles repeticiones del prompt en la respuesta
+    if (historial && historial.length > 0) {
+      for (const msg of historial) {
+        respuesta = respuesta.replace(msg.content, '').trim();
+      }
+    }
+    // Quitar "Ori:" si el modelo lo incluye
+    respuesta = respuesta.replace(/^Ori:\s*/i, '');
+    // Quitar el nombre del usuario si aparece
+    respuesta = respuesta.replace(new RegExp(`${nombreUsuario}:\\s*`, 'gi'), '');
+
+    if (!respuesta) {
+      respuesta = 'Cuéntame más sobre eso...';
+    }
 
     if (conversacion_id) {
       try {

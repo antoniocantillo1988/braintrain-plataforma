@@ -77,8 +77,8 @@ export default function Chat() {
     try {
       setEstadoOri('thinking');
 
-      // Preparar historial para OpenAI (últimos 20)
-      const historial = mensajes.slice(-20).map(m => ({
+      // Enviamos solo los mensajes relevantes (sin etiquetas de rol duplicadas)
+      const historial = mensajes.slice(-8).map(m => ({
         role: m.autor === 'usuario' ? 'user' : 'assistant',
         content: m.texto,
       }));
