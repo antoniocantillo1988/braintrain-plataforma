@@ -118,7 +118,7 @@ export default function Citas() {
 
   const diasDisponibles = [...new Set(huecos.map(h => new Date(h.fecha + 'T00:00:00')))];
 
-  if (cargando) return <div className="sm:pl-52 p-6 text-stone-400 text-sm">Cargando…</div>;
+  if (cargando) return <div className="p-6 text-stone-400 text-sm">Cargando…</div>;
 
   const year = diaSeleccionado?.getFullYear();
   const month = String(diaSeleccionado?.getMonth() + 1).padStart(2, '0');
@@ -131,7 +131,7 @@ export default function Citas() {
     // Esto fuerza a React a remontar el componente al iniciar/cerrar sesión,
     // reseteando su estado interno y evitando problemas de sincronización.
     // El ID del usuario se usa para crear una clave única por usuario.
-    <div key={user?.id || 'anonimo'} className="sm:pl-52 pb-24 max-w-2xl p-4">
+    <div key={user?.id || 'anonimo'} className="pb-24 max-w-2xl p-4">
       <h1 className="text-2xl font-bold text-stone-800 mb-1">Consulta con Antonio</h1>
       <p className="text-stone-500 text-sm mb-8">Reserva una sesión de videollamada.</p>
 

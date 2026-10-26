@@ -16,8 +16,13 @@ export function AuthProvider({ children }) {
     const savedToken = localStorage.getItem('orienta_token');
     const savedUser = localStorage.getItem('orienta_user');
     if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
+      try {
+        setUser(JSON.parse(savedUser));
+        setToken(savedToken);
+      } catch {
+        localStorage.removeItem('orienta_token');
+        localStorage.removeItem('orienta_user');
+      }
     }
     setLoading(false);
   }, []);
@@ -36,7 +41,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('orienta_user');
   }
 
-  const isAdmin = user?.tipo === 1;
+  const isAdmin = Number(user?.tipo) === 1;
 
   return (
     <AuthContext.Provider value={{ user, token, loading, login, logout, isAdmin }}>

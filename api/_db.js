@@ -92,3 +92,19 @@ export function requireAuth(req, res) {
 export function json(res, status, data) {
   res.status(status).json(data);
 }
+
+// Verifica el token Y comprueba en la BD que el usuario sigue siendo administrador
+// (tipo = 1). Si no lo es, responde 401/403 por sí misma y devuelve null.
+export async function requireAdmin(req, res) {
+  const payload = verifyToken(req);
+  if (!payload) {
+    json(res, 401, { error: 'No autenticado. Inicia sesión.' });
+    return null;
+  }
+  const rows = await query('SELECT id, tipo FROM usuarios WHERE id = ?', [payload.id]);
+  if (rows.length === 0 || Number(rows[0].tipo) !== 1) {
+    json(res, 403, { error: 'Acceso denegado.' });
+    return null;
+  }
+  return { id: rows[0].id, tipo: 1 };
+}

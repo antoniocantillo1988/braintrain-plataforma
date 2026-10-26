@@ -49,15 +49,17 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-stone-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm p-8">
+    <div className="flex items-center justify-center py-6">
+      <div className="w-full max-w-md rounded-3xl border border-crema-200 bg-white p-8 shadow-suave">
 
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-teal-700">Orienta</h1>
-          <p className="text-stone-500 text-sm mt-1">Psicología infantil · Desarrollo 0–6</p>
+          <img src="/orienta-icon.png" alt="Orienta" className="mx-auto h-20 w-20 object-contain" />
+          <h1 className="text-3xl font-extrabold text-sage-500 mt-2">Orienta</h1>
+          <p className="text-[10px] font-medium tracking-[0.32em] text-sage-600">PSICOLOGÍA</p>
+          <p className="mt-2 font-serif text-sm italic text-terracota-500">Acompañamos a quien cuida</p>
         </div>
 
-        <h2 className="text-xl font-semibold text-stone-800 mb-6">Crear cuenta</h2>
+        <h2 className="text-xl font-semibold text-tierra-800 mb-6">Crear cuenta</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

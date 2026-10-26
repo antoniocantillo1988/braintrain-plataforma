@@ -7,14 +7,12 @@ const BASE = import.meta.env.VITE_API_BASE || '/api';
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem('orienta_token');
 
-  // Se construye la cabecera base.
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
 
-  // Se añade el token de autorización solo si existe.
-  // Esto evita enviar 'Authorization: Bearer null' en peticiones autenticadas.
+  // Solo se añade el token si existe (evita enviar 'Bearer null')
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -26,6 +24,15 @@ export async function apiFetch(path, options = {}) {
   });
 
   const data = await res.json().catch(() => ({}));
+
+  // Sesión caducada: limpiamos y mandamos a /login (excepto en login/registro,
+  // donde un 401 significa "credenciales incorrectas")
+  if (res.status === 401 && token && !path.startsWith('/auth/')) {
+    localStorage.removeItem('orienta_token');
+    localStorage.removeItem('orienta_user');
+    window.location.href = '/login';
+    throw new Error('Tu sesión ha caducado. Inicia sesión de nuevo.');
+  }
 
   if (!res.ok) {
     throw new Error(data.error || `Error ${res.status}`);
@@ -39,5 +46,6 @@ export const api = {
   get: (path) => apiFetch(path, { method: 'GET' }),
   post: (path, body) => apiFetch(path, { method: 'POST', body }),
   put: (path, body) => apiFetch(path, { method: 'PUT', body }),
-  del: (path) => apiFetch(path, { method: 'DELETE' }),
+  // CORREGIDO: DELETE ahora puede llevar body (los endpoints admin lo leen de req.body)
+  del: (path, body) => apiFetch(path, { method: 'DELETE', body }),
 };

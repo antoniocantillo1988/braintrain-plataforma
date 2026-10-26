@@ -1,52 +1,38 @@
 /** @type {import('tailwindcss').Config} */
+// Paleta Orienta · Propuesta 4 "Círculo de apoyo"
+//   verde salvia #5E8C7B · terracota #CB745A · crema dorado #DDBF88 · crema #EADFCB
+const sage = {
+  50: '#F1F6F4', 100: '#E0EBE6', 200: '#C2D7CE', 300: '#9DBDB0', 400: '#7BA392',
+  500: '#5E8C7B', 600: '#4E7466', 700: '#3F5F54', 800: '#324B43', 900: '#263A34',
+};
+
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
       colors: {
-        /* Paleta de marca */
-        salvia: {
-          50: '#EADFCB',
-          100: '#E3D6BE',
-          200: '#DDBF88',
-          300: '#DDBF88',
-          400: '#DDBF88',
-          500: '#5E8C7B',
-          600: '#5E8C7B',
-          700: '#4E7466',
-          800: '#43614F',
-        },
+        sage,
+        // Las clases "teal-*" que ya usa la app pasan automáticamente a verde salvia
+        teal: sage,
         terracota: {
-          50: '#F7EAE4',
-          100: '#F0DCD2',
-          500: '#CB745A',
-          600: '#B9654B',
-          700: '#A2553F',
+          50: '#FBF1ED', 100: '#F6E1DA', 200: '#EDC3B5', 300: '#E19F8A', 400: '#D68870',
+          500: '#CB745A', 600: '#B25F46', 700: '#8F4B38',
         },
-        arena: {
-          50: '#F7F1E4',
-          100: '#DDBF88',
-          200: '#DDBF88',
-          300: '#DDBF88',
+        oro: {
+          50: '#FBF6EC', 100: '#F6EDD9', 200: '#EFDDB9', 300: '#E8D3AA', 400: '#DDBF88',
+          500: '#C9A565', 600: '#A9864A',
         },
         crema: {
-          50: '#EADFCB',
-          100: '#EADFCB',
-          200: '#EADFCB',
+          50: '#FBF8F2', 100: '#F6EFE5', 200: '#EADFCB', 300: '#DCCDB2',
         },
-        /* La escala teal se reasigna a la paleta de marca para
-           que todos los componentes existentes usen los nuevos colores */
-        teal: {
-          50: '#EADFCB',
-          100: '#E3D6BE',
-          200: '#DDBF88',
-          300: '#DDBF88',
-          400: '#DDBF88',
-          500: '#5E8C7B',
-          600: '#5E8C7B',
-          700: '#4E7466',
-          800: '#43614F',
-        },
+        tierra: { 700: '#4A3730', 800: '#3B2C27' },
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        serif: ['Georgia', 'Cambria', '"Times New Roman"', 'serif'],
+      },
+      boxShadow: {
+        suave: '0 8px 30px -12px rgba(94, 140, 123, 0.35)',
       },
     },
   },
