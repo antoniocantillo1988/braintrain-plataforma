@@ -27,6 +27,10 @@ export default function Home() {
           <h1 className="text-4xl font-serif font-bold text-stone-800">Antonio Cantillo Rueda</h1>
           <p className="text-teal-700 font-medium mt-2">Psicólogo Colegiado AO 14923 · Neuropsicología</p>
           <p className="mt-4 text-stone-600">Psicología clínica con un enfoque humano, resolutivo y proactivo.</p>
+          <p className="mt-2 text-2xl font-serif font-bold text-teal-800">Especialista en personas que cuidan</p>
+          <p className="mt-6 text-xs text-stone-400 max-w-md">
+            Aviso Legal: Antonio Cantillo 74944739K acogido a la Política de Protección de datos y privacidad acorde a la LOPD. Cualquier duda me puedes preguntar.
+          </p>
           <a href="/citas" className="inline-block mt-6 bg-teal-700 text-white px-8 py-3 rounded-full hover:bg-teal-800 transition">Pedir Cita</a>
         </div>
       </section>

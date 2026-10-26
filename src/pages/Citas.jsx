@@ -147,9 +147,9 @@ export default function Citas() {
         />
         <style>{`
           .rdp-day.dia-disponible {
-            color: #0f766e !important;
+            color: #4E7466 !important;
             font-weight: bold !important;
-            border: 1px solid #0f766e !important;
+            border: 1px solid #4E7466 !important;
           }
         `}</style>
       </section>

@@ -110,8 +110,8 @@ export default function OriCharacter({ estado = 'neutral', tamaño = 'md' }) {
           </radialGradient>
           {/* Gradiente de la bufanda */}
           <linearGradient id="scarfGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#0d9488"/>
-            <stop offset="100%" stopColor="#0f766e"/>
+            <stop offset="0%" stopColor="#5E8C7B"/>
+            <stop offset="100%" stopColor="#43614F"/>
           </linearGradient>
         </defs>
 
@@ -168,15 +168,15 @@ export default function OriCharacter({ estado = 'neutral', tamaño = 'md' }) {
 
         {/* Bufanda terapéutica */}
         <path d="M28 72 Q30 68 35 70 L50 75 L65 70 Q70 68 72 72 Q70 78 60 78 Q55 80 50 82 Q45 80 40 78 Q30 78 28 72 Z" 
-              fill="url(#scarfGrad)" stroke="#0b7a6e" strokeWidth="1"/>
-        <path d="M65 70 Q68 75 72 78 Q70 82 62 80" fill="#0d9488" stroke="#0b7a6e" strokeWidth="1"/>
-        <path d="M60 78 Q62 85 58 90" fill="none" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round">
+              fill="url(#scarfGrad)" stroke="#43614F" strokeWidth="1"/>
+        <path d="M65 70 Q68 75 72 78 Q70 82 62 80" fill="#5E8C7B" stroke="#43614F" strokeWidth="1"/>
+        <path d="M60 78 Q62 85 58 90" fill="none" stroke="#5E8C7B" strokeWidth="2.5" strokeLinecap="round">
           <animate attributeName="d" 
             values="M60 78 Q62 85 58 90;M60 78 Q63 84 60 88;M60 78 Q62 85 58 90" 
             dur="2s" repeatCount="indefinite"/>
         </path>
         {/* Borlas bufanda */}
-        <circle cx="58" cy="90" r="2" fill="#0d9488">
+        <circle cx="58" cy="90" r="2" fill="#5E8C7B">
           <animate attributeName="cy" values="90;88;90" dur="2s" repeatCount="indefinite"/>
         </circle>
       </svg>
