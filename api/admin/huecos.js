@@ -8,14 +8,14 @@ export default async function handler(req, res) {
 
   // POST - crear hueco
   if (req.method === 'POST') {
-    const { fecha, hora_inicio, hora_fin } = req.body || {};
+    const { fecha, hora_inicio, hora_fin, modalidad } = req.body || {};
     if (!fecha || !hora_inicio || !hora_fin) {
       return json(res, 400, { error: 'Fecha, hora inicio y hora fin son obligatorios.' });
     }
     try {
       await query(
-        'INSERT INTO disponibilidad (fecha, hora_inicio, hora_fin) VALUES (?, ?, ?)',
-        [fecha, hora_inicio, hora_fin]
+                'INSERT INTO disponibilidad (fecha, hora_inicio, hora_fin, modalidad) VALUES (?, ?, ?)',
+        [fecha, hora_inicio, hora_fin, modalidad === 'online' ? 'online' : 'presencial']
       );
       return json(res, 201, { ok: true });
     } catch (err) {

@@ -40,5 +40,18 @@ export default async function handler(req, res) {
     }
   }
 
+  // DELETE - eliminar cita
+  if (req.method === 'DELETE') {
+    const { cita_id } = req.body || {};
+    if (!cita_id) return json(res, 400, { error: 'Falta cita_id.' });
+    try {
+      await query('DELETE FROM citas WHERE id = ?', [cita_id]);
+      await query('DELETE FROM disponibilidad WHERE id = ? AND ocupado = 1', [cita_id]);
+      return json(res, 200, { ok: true });
+    } catch (err) {
+      return json(res, 500, { error: err.message });
+    }
+  }
+
   return json(res, 405, { error: 'Método no permitido' });
 };
