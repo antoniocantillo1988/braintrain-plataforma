@@ -2,7 +2,12 @@
 // Wrapper sobre fetch que añade el token JWT automáticamente
 // y centraliza el manejo de errores.
 
-const BASE = import.meta.env.VITE_API_BASE || '/api';
+// Normaliza la base: si es relativa ("api", "./api"), la convierte en absoluta ("/api").
+// Si es una URL completa (https://...), la respeta.
+const RAW_BASE = import.meta.env.VITE_API_BASE || '/api';
+const BASE = /^https?:\/\//.test(RAW_BASE)
+  ? RAW_BASE.replace(/\/+$/, '')
+  : '/' + RAW_BASE.replace(/^\.?\/+/, '').replace(/\/+$/, '');
 
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem('orienta_token');
