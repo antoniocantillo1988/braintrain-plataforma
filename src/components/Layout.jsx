@@ -4,7 +4,7 @@ import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   MessageSquare, Brain, BookOpen, Calendar, Home, LogOut, Phone,
-  CalendarCheck, Users, ShieldCheck, Menu, X, LayoutDashboard,
+  CalendarCheck, Users, ShieldCheck, Menu, X, LayoutDashboard, Info,
 } from 'lucide-react';
 
 const AVISO_LEGAL =
@@ -67,6 +67,7 @@ function MenuLateral({ onNavigate }) {
               <NavItem to="/chat" icon={MessageSquare} onClick={onNavigate}>Chat</NavItem>
               <NavItem to="/braintrain" icon={Brain} onClick={onNavigate}>BrainTrain</NavItem>
               <NavItem to="/talleres" icon={BookOpen} onClick={onNavigate}>Talleres</NavItem>
+              <NavItem to="/acerca-de" icon={Info} onClick={onNavigate}>Acerca de</NavItem>
             </>
           )}
         </nav>

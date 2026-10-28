@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import AdminCitas from './pages/AdminCitas';
 import AdminUsuarios from './pages/AdminUsuarios';
+import AcercaDe from './pages/AcercaDe';
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/citas" element={<Citas />} />
             <Route path="/login" element={<Login />} />
             <Route path="/registro" element={<Register />} />
+            <Route path="/acerca-de" element={<AcercaDe />} />
 
             {/* Requieren sesión */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

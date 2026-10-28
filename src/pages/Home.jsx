@@ -10,10 +10,10 @@ const testimonios = [
   { texto: 'El enfoque resolutivo de Antonio es lo que más destaco. Herramientas reales para el día a día.', autor: 'Laura M.', perfil: 'Profesional en activo' },
 ];
 
-const especialidades = [
-  { icon: LifeBuoy, titulo: 'Atención en Crisis', texto: 'Acompañamiento terapéutico personalizado y cercano.', color: 'bg-terracota-100 text-terracota-600' },
-  { icon: Baby, titulo: 'Neurodesarrollo', texto: 'Evaluación y apoyo integral para menores y familias.', color: 'bg-sage-100 text-sage-600' },
-  { icon: GraduationCap, titulo: 'Mentoría', texto: 'Orientación académica y desarrollo personal.', color: 'bg-oro-100 text-oro-600' },
+const especialidades = [                                
+  { icon: LifeBuoy, titulo: 'Apoyo al cuidador', texto: 'Orientación personalizada y cercana, psicoeducación y estrategias de autocuidado para quien cuida de un familiar.', color: 'bg-terracota-100 text-terracota-600' },
+  { icon: Baby, titulo: 'Neurodesarrollo', texto: 'Evaluación y estimulación neuropsicológica y pautas prácticas a familias.', color: 'bg-sage-100 text-sage-600' },
+  { icon: GraduationCap, titulo: 'Mediación', texto: 'Desarrollo personal, acompañado en tu propio entorno cotidiano.', color: 'bg-oro-100 text-oro-600' },
 ];
 
 export default function Home() {
