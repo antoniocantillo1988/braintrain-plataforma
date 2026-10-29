@@ -57,23 +57,29 @@ function MenuLateral({ onNavigate }) {
         <Marca onClick={onNavigate} />
         <p className="mt-3 font-serif text-sm italic text-terracota-500">Acompañamos a quien cuida</p>
 
+        {/* Para todo el mundo */}
         <nav className="mt-8 space-y-1">
           <NavItem to="/" icon={Home} onClick={onNavigate} end>Inicio</NavItem>
           <NavItem to="/citas" icon={Calendar} onClick={onNavigate}>Consultas</NavItem>
+          <NavItem to="/talleres" icon={BookOpen} onClick={onNavigate}>Talleres</NavItem>
+          <NavItem to="/material" icon={FolderOpen} onClick={onNavigate}>Materiales y guías</NavItem>
+          <NavItem to="/acerca-de" icon={Info} onClick={onNavigate}>Acerca de nosotros</NavItem>
+        </nav>
 
-          {user && (
-            <>
+        {/* Solo para usuarios con sesión */}
+        {user && (
+          <div className="mt-8">
+            <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sage-600">
+              Mi espacio
+            </p>
+            <div className="space-y-1">
               <NavItem to="/dashboard" icon={LayoutDashboard} onClick={onNavigate}>Mi panel</NavItem>
               <NavItem to="/chat" icon={MessageSquare} onClick={onNavigate}>Chat</NavItem>
-              <NavItem to="/braintrain" icon={Brain} onClick={onNavigate}>BrainTrain</NavItem>
-              <NavItem to="/talleres" icon={BookOpen} onClick={onNavigate}>Talleres</NavItem>
-              <NavItem to="/informes" icon={Info} onClick={onNavigate}>Informes</NavItem>
-            </>
-          )}
-
-          <NavItem to="/acerca-de" icon={Info} onClick={onNavigate}>Acerca de</NavItem>
-
-        </nav>
+              <NavItem to="/tareas" icon={ClipboardList} onClick={onNavigate}>Tareas</NavItem>
+              <NavItem to="/informes" icon={FileText} onClick={onNavigate}>Informes</NavItem>
+            </div>
+          </div>
+        )}
 
         {/* Solo para administradores (tipo 1) */}
         {isAdmin && (
