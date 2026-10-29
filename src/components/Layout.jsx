@@ -67,9 +67,12 @@ function MenuLateral({ onNavigate }) {
               <NavItem to="/chat" icon={MessageSquare} onClick={onNavigate}>Chat</NavItem>
               <NavItem to="/braintrain" icon={Brain} onClick={onNavigate}>BrainTrain</NavItem>
               <NavItem to="/talleres" icon={BookOpen} onClick={onNavigate}>Talleres</NavItem>
-              <NavItem to="/acerca-de" icon={Info} onClick={onNavigate}>Acerca de</NavItem>
+              <NavItem to="/informes" icon={Info} onClick={onNavigate}>Informes</NavItem>
             </>
           )}
+
+          <NavItem to="/acerca-de" icon={Info} onClick={onNavigate}>Acerca de</NavItem>
+
         </nav>
 
         {/* Solo para administradores (tipo 1) */}
