@@ -25,15 +25,17 @@ export default function App() {
             {/* Públicas */}
             <Route path="/" element={<Home />} />
             <Route path="/citas" element={<Citas />} />
+            <Route path="/talleres" element={<Talleres />} />
+            <Route path="/material" element={<Material />} />
+            <Route path="/acerca-de" element={<AcercaDe />} />
             <Route path="/login" element={<Login />} />
             <Route path="/registro" element={<Register />} />
-            <Route path="/acerca-de" element={<AcercaDe />} />
 
             {/* Requieren sesión */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-            <Route path="/braintrain" element={<ProtectedRoute><BrainTrain /></ProtectedRoute>} />
-            <Route path="/talleres" element={<ProtectedRoute><Talleres /></ProtectedRoute>} />
+            <Route path="/tareas" element={<ProtectedRoute><Tareas /></ProtectedRoute>} />
+            <Route path="/informes" element={<ProtectedRoute><Informes /></ProtectedRoute>} />
 
             {/* Solo administradores (tipo 1) */}
             <Route path="/admin/citas" element={<ProtectedRoute adminOnly><AdminCitas /></ProtectedRoute>} />
