@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  MessageSquare, Brain, BookOpen, Calendar, Home, LogOut, Phone,
-  CalendarCheck, Users, ShieldCheck, Menu, X, LayoutDashboard, Info, ClipboardList, FileText, FolderOpen,
+  MessageSquare, BookOpen, Calendar, Home, LogOut, Phone,
+  CalendarCheck, Users, ShieldCheck, Menu, X, LayoutDashboard,
+  Info, ClipboardList, FileText, FolderOpen,
 } from 'lucide-react';
 
 const AVISO_LEGAL =
